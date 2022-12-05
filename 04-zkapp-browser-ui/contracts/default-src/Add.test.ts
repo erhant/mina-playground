@@ -48,9 +48,7 @@ describe('Add', () => {
   async function localDeploy() {
     const txn = await Mina.transaction(deployerAccount, () => {
       AccountUpdate.fundNewAccount(deployerAccount);
-      zkApp.deploy({
-        zkappKey: zkAppPrivateKey,
-      });
+      zkApp.deploy();
     });
     await txn.prove();
     // this tx needs .sign(), because `deploy()` adds an account update that requires signature authorization
