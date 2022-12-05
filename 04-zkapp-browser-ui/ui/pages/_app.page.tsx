@@ -127,6 +127,7 @@ export default function App() {
 
     console.log("getting Transaction JSON...");
     const transactionJSON = await state.zkappWorkerClient!.getTransactionJSON();
+    console.log("TX:", transactionJSON);
 
     console.log("requesting send transaction...");
     const { hash } = await (window as any).mina.sendTransaction({
@@ -184,8 +185,7 @@ export default function App() {
       <div>
         Account does not exist. Please visit the faucet to fund this account
         <a href={faucetLink} target="_blank" rel="noreferrer">
-          {" "}
-          [Link]{" "}
+          [Link]
         </a>
       </div>
     );

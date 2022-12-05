@@ -1,6 +1,6 @@
 # Mina Playground
 
-This repository has the code I have written as I follow through the tutorials at. Before you start, you might need to install `zkapp-cli`.
+This repository has the code I have written as I follow through the tutorials at. Before you start, you might need to install `zkapp-cli`. I started with hopes to join [zkIgnite, Cohort 0](https://minaprotocol.com/blog/zkignite-cohort0).
 
 1. [Hello World](https://docs.minaprotocol.com/zkapps/tutorials/hello-world)
 2. [Private Inputs and Hash Functions](https://docs.minaprotocol.com/zkapps/tutorials/private-inputs-hash-functions)

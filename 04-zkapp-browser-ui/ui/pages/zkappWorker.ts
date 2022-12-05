@@ -28,7 +28,10 @@ const functions = {
     state.Add = Add;
   },
   compileContract: async (args: {}) => {
-    await state.Add!.compile();
+    const res = await state.Add!.compile();
+    console.log("VK:", res.verificationKey.hash);
+    console.log("Expected:", "4851262813207464979627140462974063613924095144061541973375101057533539242846");
+    // should be: 4851262813207464979627140462974063613924095144061541973375101057533539242846
   },
   fetchAccount: async (args: { publicKey58: string }) => {
     const publicKey = PublicKey.fromBase58(args.publicKey58);
