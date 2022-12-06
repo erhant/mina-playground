@@ -1,16 +1,16 @@
 import type { FC } from "react";
-
-// const FAUCET_LINK = "https://faucet.minaprotocol.com/?address=" + state.publicKey!.toBase58();
-const FAUCET_LINK = "https://www.aurowallet.com/";
+import { PublicKey } from "snarkyjs";
 
 const AccountDoesNotExist: FC<{
   accountExists: boolean;
   hasBeenSetup: boolean;
-}> = ({ accountExists, hasBeenSetup }) => {
+  address: PublicKey | null;
+}> = ({ accountExists, hasBeenSetup, address }) => {
+  const FAUCET_LINK = "https://faucet.minaprotocol.com/?address=";
   return !accountExists && hasBeenSetup ? (
     <div>
       Account does not exist. Please
-      <a href={FAUCET_LINK} target="_blank" rel="noreferrer">
+      <a href={FAUCET_LINK + +address!.toBase58()} target="_blank" rel="noreferrer">
         visit the faucet
       </a>
       to fund this account

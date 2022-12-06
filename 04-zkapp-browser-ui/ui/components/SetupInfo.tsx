@@ -11,9 +11,9 @@ const SetupInfo: FC<{
       {hasBeenSetup ? "SnarkyJS Ready" : "Setting up SnarkyJS..."}
       {hasWallet === false && (
         <div>
-          Could not find a wallet. Install Auro wallet here:
+          Could not find a wallet. Install Auro wallet .
           <a href={AURO_WALLET_LINK} target="_blank" rel="noreferrer">
-            [Link]
+            here
           </a>
         </div>
       )}

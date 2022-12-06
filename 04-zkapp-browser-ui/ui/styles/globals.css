@@ -12,6 +12,11 @@ a {
   color: blue;
 }
 
+main {
+  margin: 20px;
+  width: 100%; 
+}
+
 * {
   box-sizing: border-box;
 }

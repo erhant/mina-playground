@@ -8,6 +8,7 @@ import { PublicKey, Field } from "snarkyjs";
 import Head from "next/head";
 import SetupInfo from "../components/SetupInfo";
 import AccountDoesNotExist from "../components/AccountDoesNotExist";
+import MainDisplay from "../components/MainDisplay";
 
 const TX_FEE = 0.1;
 const ZKAPP_ADDRESS = "B62qph2VodgSo5NKn9gZta5BHNxppgZMDUihf1g7mXreL4uPJFXDGDA";
@@ -112,21 +113,23 @@ export default function App() {
 
   // handle send transaction
   const onSendTransaction = async () => {
+    if (!state.zkappWorkerClient) return;
+
     // update UI to indicate transaction
     setState({ ...state, creatingTransaction: true });
     console.log("sending a transaction...");
 
-    //
-    await state.zkappWorkerClient!.fetchAccount({
+    // fetch account, create & prove tx
+    await state.zkappWorkerClient.fetchAccount({
       publicKey: state.publicKey!,
     });
-    await state.zkappWorkerClient!.createUpdateTransaction();
+    await state.zkappWorkerClient.createUpdateTransaction();
     console.log("creating proof...");
-    await state.zkappWorkerClient!.proveUpdateTransaction();
-
+    await state.zkappWorkerClient.proveUpdateTransaction();
     console.log("getting Transaction JSON...");
-    const transactionJSON = await state.zkappWorkerClient!.getTransactionJSON();
+    const transactionJSON = await state.zkappWorkerClient.getTransactionJSON();
 
+    // send tx
     console.log("requesting send transaction...");
     const { hash } = await (window as any).mina.sendTransaction({
       transaction: transactionJSON,
@@ -136,6 +139,8 @@ export default function App() {
       },
     });
     console.log("see transaction at https://berkeley.minaexplorer.com/transaction/" + hash);
+
+    // update state
     setState({ ...state, creatingTransaction: false });
   };
 
@@ -151,30 +156,30 @@ export default function App() {
     setState({ ...state, currentNum });
   };
 
-  // TODO: refactor -> move this into components
-  let mainContent;
-  if (state.hasBeenSetup && state.accountExists) {
-    mainContent = (
-      <div>
-        <button onClick={onSendTransaction} disabled={state.creatingTransaction}>
-          Send Transaction
-        </button>
-        <div> Current Number in zkApp: {state.currentNum!.toString()} </div>
-        <button onClick={onRefreshCurrentNum}> Get Latest State </button>
-      </div>
-    );
-  }
-
   return (
-    <div>
+    <>
       <Head>
         <title>Mina - Tutorial 4</title>
         <meta name="description" content="UI of the Mina Protocol Tutorial Series: 4" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <SetupInfo hasBeenSetup={state.hasBeenSetup} hasWallet={state.hasWallet} />
-      <AccountDoesNotExist accountExists={state.accountExists} hasBeenSetup={state.hasBeenSetup} />
-      {mainContent}
-    </div>
+
+      <main>
+        <SetupInfo hasBeenSetup={state.hasBeenSetup} hasWallet={state.hasWallet} />
+        <AccountDoesNotExist
+          accountExists={state.accountExists}
+          hasBeenSetup={state.hasBeenSetup}
+          address={state.publicKey}
+        />
+        <MainDisplay
+          accountExists={state.accountExists}
+          hasBeenSetup={state.hasBeenSetup}
+          onSendTransaction={onSendTransaction}
+          onRefreshCurrentNum={onRefreshCurrentNum}
+          currentNum={state.currentNum}
+          creatingTransaction={state.creatingTransaction}
+        />
+      </main>
+    </>
   );
 }
