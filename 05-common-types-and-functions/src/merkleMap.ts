@@ -1,0 +1,70 @@
+import { MerkleMap, Field } from 'snarkyjs';
+
+export async function basicMerkleMapExample() {
+  const map = new MerkleMap();
+
+  const key = Field(100);
+  const value = Field(50);
+
+  map.set(key, value);
+
+  console.log('value for key', key.toString() + ':', map.get(key));
+}
+
+export class BasicMerkleTreeContract extends SmartContract {
+  @state(Field) mapRoot = State<Field>();
+
+  @method init(initialRoot: Field) {
+    this.mapRoot.set(initialRoot);
+  }
+
+  @method update(
+    keyWitness: MerkleMapWitness,
+    keyToChange: Field,
+    valueBefore: Field,
+    incrementAmount: Field
+  ) {
+    const initialRoot = this.mapRoot.get();
+    this.mapRoot.assertEquals(initialRoot);
+
+    incrementAmount.assertLt(Field(10));
+
+    // check the initial state matches what we expect
+    const [rootBefore, key] = mapWitness.computeRootAndKey(valueBefore);
+    rootBefore.assertEquals(initialRoot);
+
+    key.assertEquals(keyToChange);
+
+    // compute the root after incrementing
+    const [rootAfter, _] = mapWitness.computeRootAndKey(
+      valueBefore.add(incrementAmount)
+    );
+
+    // set the new root
+    this.treeRoot.set(rootAfter);
+  }
+}
+
+export async function basicMerkleMapExample(deployerAccount: Account) {
+  const map = new MerkleMap();
+
+  const rootBefore = map.getRoot();
+
+  const key = Field(100);
+
+  // get the witness for current map
+  const witness = map.getWitness(key);
+
+  map.set(key, value);
+
+  const txn1 = await Mina.transaction(deployerAccount, () => {
+    zkapp.update(
+      contract.update(
+        witness,
+        key,
+        Field(0), //values start in state zero
+        Field(5)
+      );
+    );
+  });
+}
