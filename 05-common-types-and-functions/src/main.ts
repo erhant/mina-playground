@@ -12,7 +12,6 @@ import {
   AccountUpdate,
 } from 'snarkyjs';
 
-import { LedgerContract } from './ledgerContract.js';
 import { basicMerkleTreeExample } from './merkleTree.js';
 import {
   boolExample,

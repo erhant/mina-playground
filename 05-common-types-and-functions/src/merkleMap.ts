@@ -1,17 +1,19 @@
-import { MerkleMap, Field } from 'snarkyjs';
+import { 
+  MerkleMap,
+  Field,
+  SmartContract,
+  state,
+  State,
+  method,
+  MerkleWitness,
+  AccountUpdate,
+  MerkleTree,
+  Mina,
+  Account,
+} from 'snarkyjs';
+  
 
-export async function basicMerkleMapExample() {
-  const map = new MerkleMap();
-
-  const key = Field(100);
-  const value = Field(50);
-
-  map.set(key, value);
-
-  console.log('value for key', key.toString() + ':', map.get(key));
-}
-
-export class BasicMerkleTreeContract extends SmartContract {
+export class BasicMerkleMapContract extends SmartContract {
   @state(Field) mapRoot = State<Field>();
 
   @method init(initialRoot: Field) {
@@ -48,14 +50,15 @@ export class BasicMerkleTreeContract extends SmartContract {
 export async function basicMerkleMapExample(deployerAccount: Account) {
   const map = new MerkleMap();
 
-  const rootBefore = map.getRoot();
-
   const key = Field(100);
-
-  // get the witness for current map
-  const witness = map.getWitness(key);
+  const value = Field(50);
 
   map.set(key, value);
+
+  console.log('value for key', key.toString() + ':', map.get(key));
+
+  // get the witness for current map
+  const witness = map.getWitness(key); 
 
   const txn1 = await Mina.transaction(deployerAccount, () => {
     zkapp.update(

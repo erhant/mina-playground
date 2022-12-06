@@ -24,3 +24,36 @@ rm -rf .git
 rm -rf .husky
 npm remove husky
 ```
+
+## To-do
+
+The compiler tells us that the `contract.sign()` is deprecated in favor of `contract.requireSignature()`. Here is an example from the first tutorial:
+
+```typescript
+const tx = await Mina.transaction(account, () => {
+  contract.requireSignature();
+  contract.update(newValue);
+  // contract.sign(zkAppPrivateKey); // depracated, use tx.sign
+});
+//       ____: sign here!
+await tx.sign([zkAppPrivateKey]).send();
+```
+
+That works alright on the first tutorial, but it gives an error in the second tutorial:
+
+```typescript
+const tx = await Mina.transaction(account, () => {
+  contract.requireSignature();
+  contract.incrementSecret(salt, secret);
+  // contract.sign(zkAppPrivateKey);
+});
+await tx.sign([zkAppPrivateKey]).send();
+```
+
+with the error:
+
+```sh
+Error: Transaction verification failed: Cannot update field 'appState' because permission for this field is 'Either', but the required authorization was not provided or is invalid.
+```
+
+I wonder why?

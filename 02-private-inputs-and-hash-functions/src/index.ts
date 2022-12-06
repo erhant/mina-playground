@@ -1,3 +1,1 @@
-import { IncrementSecret } from './IncrementSecret.js';
-
-export { IncrementSecret };
+export { IncrementSecret } from './IncrementSecret.js';

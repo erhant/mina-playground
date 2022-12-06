@@ -12,59 +12,30 @@ async function main() {
   const localBC = await setup();
 
   // a pre-funded account
-  const deployerAccount = localBC.testAccounts[0].privateKey;
+  const owner = localBC.testAccounts[0].privateKey;
 
-  /////// create a public/private key pair. The public key is our address and where we will deploy to
-  const zkAppPrivateKey = PrivateKey.random();
-  const zkAppAddress = zkAppPrivateKey.toPublicKey();
-
-  // create an instance of our Square smart contract and deploy it to zkAppAddress
-  const contract = new Square(zkAppAddress);
-  const deployTxn = await Mina.transaction(deployerAccount, () => {
-    AccountUpdate.fundNewAccount(deployerAccount);
-    contract.deploy({ zkappKey: zkAppPrivateKey });
-    contract.sign(zkAppPrivateKey);
-  });
-  await deployTxn.send();
-  console.log('contract deployed.');
+  // deploy contract
+  const [contract, zkAppPrivateKey] = await deployTx(owner);
 
   // get the initial state of our zkApp account after deployment
-  const num0 = contract.num.get();
-  console.log('state after init:', num0.toString());
+  console.log('state after init:', contract.num.get().toString());
 
-  /////// update with a transaction
-  const txn1 = await Mina.transaction(deployerAccount, () => {
-    contract.update(Field(9));
-    contract.sign(zkAppPrivateKey);
-  });
-  await txn1.send();
+  // update with a transaction (9 = 3^2)
+  await updateTx(owner, contract, zkAppPrivateKey, Field(9));
+  console.log('state after txn1:', contract.num.get().toString());
 
-  const num1 = contract.num.get();
-  console.log('state after txn1:', num1.toString());
-
-  /////// update with a transaction that is for sure to fail
+  // update with an invalid transaction (75 != 9^2)
   try {
-    const txn2 = await Mina.transaction(deployerAccount, () => {
-      contract.update(Field(75));
-      contract.sign(zkAppPrivateKey);
-    });
-    await txn2.send();
+    await updateTx(owner, contract, zkAppPrivateKey, Field(75));
   } catch (err: any) {
     console.log(err.message);
   }
-  const num2 = contract.num.get();
-  console.log('state after txn2:', num2.toString());
+  console.log('state after txn2:', contract.num.get().toString());
 
-  /////// update with another transaction
-  const txn3 = await Mina.transaction(deployerAccount, () => {
-    contract.update(Field(81));
-    contract.sign(zkAppPrivateKey);
-  });
-  await txn3.send();
-  const num3 = contract.num.get();
-  console.log('state after txn3:', num3.toString());
+  // update with a transaction (81 = 9^2)
+  await updateTx(owner, contract, zkAppPrivateKey, Field(81));
+  console.log('state after txn3:', contract.num.get().toString());
 
-  ///// finish
   await finish();
 }
 
@@ -90,6 +61,52 @@ async function finish() {
   await shutdown();
   console.log('bye bye.');
 }
-main()
-  .then(() => console.log('Done'))
-  .catch(() => console.log('Error!'));
+
+/**
+ * Deploys a Square contract with a random private key
+ * @param owner fee payer & deployer account
+ * @returns the contract instance and its private key
+ */
+async function deployTx(owner: PrivateKey): Promise<[Square, PrivateKey]> {
+  // create a public/private key pair. The public key is our address and where we will deploy to
+  const zkAppPrivateKey = PrivateKey.random();
+  const zkAppAddress = zkAppPrivateKey.toPublicKey();
+
+  // create an instance of our Square smart contract and deploy it to zkAppAddress
+  const contract = new Square(zkAppAddress);
+  const deployTxn = await Mina.transaction(owner, () => {
+    AccountUpdate.fundNewAccount(owner); // pays for the fee
+    contract.requireSignature();
+    contract.deploy({ zkappKey: zkAppPrivateKey });
+    // contract.sign(zkAppPrivateKey); // depracated
+  });
+  await deployTxn.send();
+  console.log('contract deployed.');
+
+  return [contract, zkAppPrivateKey];
+}
+
+/**
+ * Makes an update transaction
+ * @param account message sender
+ * @param contract target contract instance
+ * @param zkAppPrivateKey private key of contract
+ * @param newValue new state variable value
+ */
+async function updateTx(
+  account: PrivateKey,
+  contract: Square,
+  zkAppPrivateKey: PrivateKey,
+  newValue: Field
+) {
+  const tx = await Mina.transaction(account, () => {
+    contract.requireSignature();
+    contract.update(newValue);
+    // contract.sign(zkAppPrivateKey); // depracated, use tx.sign
+  });
+  await tx.sign([zkAppPrivateKey]).send();
+}
+
+// dont use require.module here
+main().then(() => console.log('Done'));
+// .catch(() => console.log('Error!'));
