@@ -1,3 +1,1 @@
-import { LedgerContract } from './ledgerContract.js';
-
-export { LedgerContract };
+export { LedgerContract } from './ledgerWithMerkleTree.js';

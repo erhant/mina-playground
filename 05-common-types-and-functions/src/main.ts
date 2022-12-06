@@ -1,68 +1,44 @@
-import {
-  Mina,
-  isReady,
-  shutdown,
-  Int64,
-  Signature,
-  Poseidon,
-  Field,
-  Circuit,
-  MerkleWitness,
-  MerkleTree,
-  AccountUpdate,
-} from 'snarkyjs';
+import { Mina, isReady, shutdown } from 'snarkyjs';
 
 import { basicMerkleTreeExample } from './merkleTree.js';
-import {
-  boolExample,
-  signedNumExample,
-  charExample,
-  stringExample,
-  demonstration,
-} from './types.js';
+import { boolExample, signedNumExample, charExample, stringExample, demonstration } from './types.js';
 import { pointExample } from './struct.js';
-import { ifExample } from './controlFlow.js';
+import { ifAndSwitchExample } from './controlFlow.js';
 import { basicMerkleMapExample } from './merkleMap.js';
+import { ledgerContractExample } from './ledgerWithMerkleTree.js';
 
 async function main() {
-  await isReady;
-
-  // deploy local blockchain
-  const Local = await setup();
-  const deployerAccount = Local.testAccounts[0].privateKey;
+  const localBC = await setup();
+  const owner = localBC.testAccounts[0].privateKey;
 
   // simple types
-  boolExample();
-  signedNumExample();
-  charExample();
+  // boolExample();
+  // signedNumExample();
+  // charExample();
 
   // advanced types
-  stringExample();
+  // stringExample();
 
   // demo of all types
-  demonstration();
+  // demonstration();
 
   // class (struct) example
-  pointExample();
+  // pointExample();
 
   // circuit logic flow if / switch example
-  ifExample();
+  // ifAndSwitchExample();
 
   // merkle tree example
-  await basicMerkleTreeExample(deployerAccount);
+  // await basicMerkleTreeExample(owner);
 
   // merkle map example
-  await basicMerkleMapExample();
+  // await basicMerkleMapExample(owner);
 
-  // --------------------------------------
-  // create a new merkle tree and LedgerContract zkapp account
-
-  // --------------------------------------
+  // ledger contract example
+  await ledgerContractExample(owner);
 
   await finish();
 }
-
-main();
 
 /**
  * Sets up Mina local blockchain.
@@ -73,9 +49,9 @@ async function setup() {
   await isReady;
   console.log('SnarkyJS loaded!\n');
 
-  const Local = Mina.LocalBlockchain();
-  Mina.setActiveInstance(Local);
-  return Local;
+  const localBC = Mina.LocalBlockchain();
+  Mina.setActiveInstance(localBC);
+  return localBC;
 }
 
 /**
@@ -86,6 +62,5 @@ async function finish() {
   await shutdown();
   console.log('bye bye.');
 }
-main()
-  .then(() => console.log('Done'))
-  .catch(() => console.log('Error!'));
+
+main().then(() => console.log('Done'));

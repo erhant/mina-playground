@@ -1,21 +1,10 @@
 import { Add } from './Add';
-import {
-  isReady,
-  shutdown,
-  Field,
-  Mina,
-  PrivateKey,
-  PublicKey,
-  AccountUpdate,
-} from 'snarkyjs';
+import { isReady, shutdown, Field, Mina, PrivateKey, PublicKey, AccountUpdate } from 'snarkyjs';
 
 let proofsEnabled = false;
 
 describe('Add', () => {
-  let deployerAccount: PrivateKey,
-    zkAppAddress: PublicKey,
-    zkAppPrivateKey: PrivateKey,
-    zkApp: Add;
+  let deployerAccount: PrivateKey, zkAppAddress: PublicKey, zkAppPrivateKey: PrivateKey, zkApp: Add;
 
   beforeAll(async () => {
     await isReady;
