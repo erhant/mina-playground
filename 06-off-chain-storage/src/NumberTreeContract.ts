@@ -12,7 +12,7 @@ import {
   Bool,
 } from 'snarkyjs';
 
-import { OffChainStorage, Update, MerkleWitness8 } from 'experimental-zkapp-offchain-storage';
+import { OffChainStorage, MerkleWitness8 } from 'experimental-zkapp-offchain-storage';
 
 export class NumberTreeContract extends SmartContract {
   @state(PublicKey) storageServerPublicKey = State<PublicKey>();
@@ -43,40 +43,42 @@ export class NumberTreeContract extends SmartContract {
     storedNewRootNumber: Field,
     storedNewRootSignature: Signature
   ) {
+    // assert current state
     const storedRoot = this.storageTreeRoot.get();
     this.storageTreeRoot.assertEquals(storedRoot);
 
-    let storedNumber = this.storageNumber.get();
+    const storedNumber = this.storageNumber.get();
     this.storageNumber.assertEquals(storedNumber);
 
-    let storageServerPublicKey = this.storageServerPublicKey.get();
+    const storageServerPublicKey = this.storageServerPublicKey.get();
     this.storageServerPublicKey.assertEquals(storageServerPublicKey);
 
+    // new leaf must be greater than the old leaf
     let leaf = [oldNum];
     let newLeaf = [num];
-
-    // newLeaf can be a function of the existing leaf
     newLeaf[0].assertGt(leaf[0]);
 
-    const updates = [
-      {
-        leaf,
-        leafIsEmpty,
-        newLeaf,
-        newLeafIsEmpty: Bool(false),
-        leafWitness: path,
-      },
-    ];
-
+    // update off-chain state
+    // this function checks that when the update is applied to the tree represented by the
+    // existing on-chain tree root, the data for the new tree is being stored by the storage server.
     const storedNewRoot = OffChainStorage.assertRootUpdateValid(
       storageServerPublicKey,
       storedNumber,
       storedRoot,
-      updates,
+      [
+        {
+          leaf,
+          leafIsEmpty,
+          newLeaf,
+          newLeafIsEmpty: Bool(false),
+          leafWitness: path,
+        },
+      ],
       storedNewRootNumber,
       storedNewRootSignature
     );
 
+    // update on-chain state
     this.storageTreeRoot.set(storedNewRoot);
     this.storageNumber.set(storedNewRootNumber);
   }

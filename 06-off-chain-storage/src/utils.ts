@@ -18,7 +18,7 @@ export const loopUntilAccountExists = async ({
       accountExists = accountExists && response.account!.appState != null;
     }
     if (!accountExists) {
-      await eachTimeNotExist();
+      eachTimeNotExist();
       await new Promise((resolve) => setTimeout(resolve, 5000));
     } else {
       // TODO add optional check that verification key is correct once this is available in SnarkyJS
@@ -49,6 +49,7 @@ export const makeAndSendTransaction = async <State extends ToString>({
   mutateZkApp: () => void;
   transactionFee: number;
   getState: () => State;
+  // eslint-disable-next-line no-unused-vars
   statesEqual: (state1: State, state2: State) => boolean;
 }) => {
   const initialState = getState();
@@ -71,7 +72,7 @@ export const makeAndSendTransaction = async <State extends ToString>({
 
   console.log('Sending the transaction...');
   const res = await transaction.send();
-  const hash = await res.hash(); // This will change in a future version of SnarkyJS
+  const hash = await res.hash(); // NOTE: this will change in a future version of SnarkyJS
   if (hash == null) {
     console.log('error sending transaction (see above)');
   } else {

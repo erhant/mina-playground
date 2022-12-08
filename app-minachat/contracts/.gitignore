@@ -11,6 +11,3 @@ coverage
 
 # Never commit keys to Git!
 keys
-
-# Database for the off-chain storage
-database.json

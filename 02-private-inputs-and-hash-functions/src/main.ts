@@ -2,10 +2,7 @@ import { IncrementSecret } from './IncrementSecret.js';
 import { isReady, shutdown, Field, Mina } from 'snarkyjs';
 
 async function main() {
-  const localBC = await setup();
-
-  // a pre-funded account
-  const owner = localBC.testAccounts[0].privateKey;
+  const owner = await setup();
 
   // make a random salt
   const salt = Field.random();
@@ -27,7 +24,7 @@ async function main() {
 
 /**
  * Sets up Mina local blockchain.
- * @returns a Local blockchain instance
+ * @returns fee payer account
  */
 async function setup() {
   console.log('Loading SnarkyJS...');
@@ -36,7 +33,7 @@ async function setup() {
 
   const localBC = Mina.LocalBlockchain();
   Mina.setActiveInstance(localBC);
-  return localBC;
+  return localBC.testAccounts[0].privateKey;
 }
 
 /**

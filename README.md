@@ -12,8 +12,8 @@ This repository has the code I have written as I follow through the tutorials at
 4. [Building a zkApp UI in the Browser with React (NextJS)](https://docs.minaprotocol.com/zkapps/tutorials/zkapp-ui-with-react). See my submission [here](https://github.com/erhant/mina-sample-zkapp-ui).
 5. [Common Types and Functions](https://docs.minaprotocol.com/zkapps/tutorials/common-types-and-functions)
 6. [Off-Chain Storage](https://docs.minaprotocol.com/zkapps/tutorials/offchain-storage)
-7. [Oracles](https://docs.minaprotocol.com/zkapps/tutorials/oracle)
-8. [Custom Tokens](https://docs.minaprotocol.com/zkapps/tutorials/custom-tokens)
+7. [Oracles TODO](https://docs.minaprotocol.com/zkapps/tutorials/oracle)
+8. [Custom Tokens TODO](https://docs.minaprotocol.com/zkapps/tutorials/custom-tokens)
 
 In all examples, I have done the following:
 
@@ -25,35 +25,9 @@ rm -rf .husky
 npm remove husky
 ```
 
-## To-do
+Some tutorials require further detail:
 
-The compiler tells us that the `contract.sign()` is deprecated in favor of `contract.requireSignature()`. Here is an example from the first tutorial:
+- Tutorial 5 includes a Ledger Contract that uses Merkle Trees.
+- Tutorial 6 uses a single-server solution to data storage. This is useful for prototyping zkApps and building zkApps where some trust guarantees are reasonable, but should not be used for zkApps that require trustlessness. It is intended as one of several options for data availability on Mina. See the server implementation [here](https://github.com/es92/zkApp-offchain-storage).
 
-```typescript
-const tx = await Mina.transaction(account, () => {
-  contract.requireSignature();
-  contract.update(newValue);
-  // contract.sign(zkAppPrivateKey); // depracated, use tx.sign
-});
-//       ____: sign here!
-await tx.sign([zkAppPrivateKey]).send();
-```
-
-That works alright on the first tutorial, but it gives an error in the second tutorial:
-
-```typescript
-const tx = await Mina.transaction(account, () => {
-  contract.requireSignature();
-  contract.incrementSecret(salt, secret);
-  // contract.sign(zkAppPrivateKey);
-});
-await tx.sign([zkAppPrivateKey]).send();
-```
-
-with the error:
-
-```sh
-Error: Transaction verification failed: Cannot update field 'appState' because permission for this field is 'Either', but the required authorization was not provided or is invalid.
-```
-
-I wonder why?
+I also have an example app: `offchain-chatting`.

@@ -8,8 +8,7 @@ import { basicMerkleMapExample } from './merkleMap.js';
 import { ledgerContractExample } from './ledgerWithMerkleTree.js';
 
 async function main() {
-  const localBC = await setup();
-  const owner = localBC.testAccounts[0].privateKey;
+  const owner = await setup();
 
   // simple types
   console.log('\n===== SIMPLE TYPES =====');
@@ -47,7 +46,7 @@ async function main() {
 
 /**
  * Sets up Mina local blockchain.
- * @returns a Local blockchain instance
+ * @returns fee payer account
  */
 async function setup() {
   console.log('Loading SnarkyJS...');
@@ -56,7 +55,7 @@ async function setup() {
 
   const localBC = Mina.LocalBlockchain();
   Mina.setActiveInstance(localBC);
-  return localBC;
+  return localBC.testAccounts[0].privateKey;
 }
 
 /**

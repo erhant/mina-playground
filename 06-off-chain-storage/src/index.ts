@@ -1,3 +1,1 @@
-import { NumberTreeContract } from './NumberTreeContract.js';
-
-export { NumberTreeContract };
+export { NumberTreeContract } from './NumberTreeContract.js';

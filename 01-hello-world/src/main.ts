@@ -1,11 +1,8 @@
 import { Square } from './Square.js';
-import { isReady, shutdown, Field, Mina, PrivateKey, AccountUpdate } from 'snarkyjs';
+import { isReady, shutdown, Field, Mina } from 'snarkyjs';
 
 async function main() {
-  const localBC = await setup();
-
-  // a pre-funded account
-  const owner = localBC.testAccounts[0].privateKey;
+  const owner = await setup();
 
   // deploy contract
   const [contract, zkAppPrivateKey] = await Square.deployTx(owner);
@@ -34,7 +31,7 @@ async function main() {
 
 /**
  * Sets up Mina local blockchain.
- * @returns a Local blockchain instance
+ * @returns fee payer account
  */
 async function setup() {
   console.log('Loading SnarkyJS...');
@@ -43,7 +40,7 @@ async function setup() {
 
   const localBC = Mina.LocalBlockchain();
   Mina.setActiveInstance(localBC);
-  return localBC;
+  return localBC.testAccounts[0].privateKey;
 }
 
 /**
@@ -57,4 +54,3 @@ async function finish() {
 
 // dont use require.module here
 main().then(() => console.log('Done'));
-// .catch(() => console.log('Error!'));
