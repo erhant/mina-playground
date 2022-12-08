@@ -1,4 +1,4 @@
-import { Add } from './Add';
+import { Add } from './MinaChat';
 import { isReady, shutdown, Field, Mina, PrivateKey, PublicKey, AccountUpdate } from 'snarkyjs';
 
 let proofsEnabled = false;

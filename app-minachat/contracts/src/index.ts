@@ -1,1 +1,1 @@
-export { Add } from './Add.js';
+export { Add } from './MinaChat.js';
