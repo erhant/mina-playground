@@ -11,7 +11,6 @@ import {
   PublicKey,
   Signature,
   Circuit,
-  Account,
   AccountUpdate,
   MerkleTree,
   Mina,
@@ -48,6 +47,7 @@ export class LedgerContract extends SmartContract {
     senderSignature: Signature,
     sendAmount: Field
   ) {
+    // assert initial state
     const initialLedgerRoot = this.ledgerRoot.get();
     this.ledgerRoot.assertEquals(initialLedgerRoot);
 
@@ -78,6 +78,7 @@ export class LedgerContract extends SmartContract {
     const isNewRecipientAccount = rootSenderAfter.equals(rootRecipientBeforeEmpty);
 
     // check requirements on the recipient state before receiving
+    // TODO: can we refactor this into a simpler Circuit.if?
     const recipientAccountPassesRequirements = Circuit.if(
       isNewRecipientAccount,
       (() => {
@@ -100,116 +101,127 @@ export class LedgerContract extends SmartContract {
     // set the new ledgerRoot
     this.ledgerRoot.set(rootRecipientAfter);
   }
+
+  async sendBalanceTx(
+    owner: PrivateKey,
+    zkAppPrivateKey: PrivateKey,
+    sendWitness: MerkleWitness20,
+    recipientWitness: MerkleWitness20,
+    senderInitialBalance: Field,
+    recipientInitialBalance: Field,
+    senderPublicKey: PublicKey,
+    recipientPublicKey: PublicKey,
+    senderSignature: Signature,
+    sendAmount: Field
+  ) {
+    const tx = await Mina.transaction(owner, () => {
+      this.sendBalance(
+        sendWitness,
+        recipientWitness,
+        senderInitialBalance,
+        recipientInitialBalance,
+        senderPublicKey,
+        recipientPublicKey,
+        senderSignature,
+        sendAmount
+      );
+      this.requireSignature();
+    });
+    await tx.sign([zkAppPrivateKey]).send();
+  }
+
+  static async deployTx(owner: PrivateKey, tree: MerkleTree): Promise<[LedgerContract, PrivateKey]> {
+    // create a public/private key pair. The public key is our address and where we will deploy to
+    const zkAppPrivateKey = PrivateKey.random();
+    const zkAppAddress = zkAppPrivateKey.toPublicKey();
+
+    // create an instance of our smart contract and deploy it to zkAppAddress
+    const contract = new LedgerContract(zkAppAddress);
+    const deployTxn = await Mina.transaction(owner, () => {
+      AccountUpdate.fundNewAccount(owner);
+      contract.deploy({ zkappKey: zkAppPrivateKey });
+      contract.initState(tree.getRoot());
+      contract.requireSignature();
+    });
+    await deployTxn.sign([zkAppPrivateKey]).send();
+    console.log('contract deployed.');
+
+    return [contract, zkAppPrivateKey];
+  }
 }
 
+/**
+ * An example of sending funds between two accounts. Both accounts exist in the initial tree for this example,
+ * but it would also work if the recipient did not exist in the initial tree; meaning that they have an initial
+ * balance of 0.
+ * @param owner contract deployer
+ */
 export async function ledgerContractExample(owner: PrivateKey) {
-  const ledgerZkAppPrivateKey = PrivateKey.random();
-  const ledgerZkAppAddress = ledgerZkAppPrivateKey.toPublicKey();
-
+  // create a new merkle tree
   const tree = new MerkleTree(TREE_HEIGHT);
 
-  const senderInitialBalance = Field(100);
-  const recipientInitialBalance = Field(7);
-
+  // prepare sender account
+  const senderAccountIndex = 10n;
   const senderPrivateKey = PrivateKey.random();
   const senderPublicKey = senderPrivateKey.toPublicKey();
+  const senderInitialBalance = Field(100);
 
+  // prepare recipient account
+  const recipientAccountIndex = 500n;
+  const recipientInitialBalance = Field(7);
   const recipientPrivateKey = PrivateKey.random();
   const recipientPublicKey = recipientPrivateKey.toPublicKey();
 
-  const senderAccount = 10;
-  const recipientAccount = 500;
+  // sender will send this much
+  const sendAmount = Field(12);
 
-  tree.setLeaf(BigInt(senderAccount), Poseidon.hash([senderInitialBalance, Poseidon.hash(senderPublicKey.toFields())]));
+  // initialize the local tree with the initial balances
+  tree.setLeaf(senderAccountIndex, Poseidon.hash([senderInitialBalance, Poseidon.hash(senderPublicKey.toFields())]));
   tree.setLeaf(
-    BigInt(recipientAccount),
+    recipientAccountIndex,
     Poseidon.hash([recipientInitialBalance, Poseidon.hash(recipientPublicKey.toFields())])
   );
 
-  const zkapp = new LedgerContract(ledgerZkAppAddress);
+  /////////////// deploy the contract with the initial tree ///////////////
+  const [contract, ledgerZkAppPrivateKey] = await LedgerContract.deployTx(owner, tree);
 
-  const deployTxn = await Mina.transaction(owner, () => {
-    AccountUpdate.fundNewAccount(owner);
-    zkapp.deploy({ zkappKey: ledgerZkAppPrivateKey });
-    zkapp.initState(tree.getRoot());
-    zkapp.sign(ledgerZkAppPrivateKey);
-  });
-  await deployTxn.send();
+  /////////////// send from the sender to the recipient ///////////////
+  // update balances
+  const senderNewBalance = senderInitialBalance.sub(sendAmount);
+  const recipientNewBalance = recipientInitialBalance.add(sendAmount);
 
-  // --------------------------------------
-  // send from the sender to the recipient
+  // make witnesses for the sender & update tree
+  const sendWitness = new MerkleWitness20(tree.getWitness(senderAccountIndex));
+  tree.setLeaf(senderAccountIndex, Poseidon.hash([senderNewBalance, Poseidon.hash(senderPublicKey.toFields())]));
 
-  const amount = Field(12);
-
-  const newSenderBalance = senderInitialBalance.sub(amount);
-
-  const sendWitness1 = new MerkleWitness20(tree.getWitness(BigInt(senderAccount)));
-  tree.setLeaf(BigInt(senderAccount), Poseidon.hash([newSenderBalance, Poseidon.hash(senderPublicKey.toFields())]));
-  const recipientWitness1 = new MerkleWitness20(tree.getWitness(BigInt(recipientAccount)));
-
+  // make witnesses for the recipient & update tree
+  const recipientWitness = new MerkleWitness20(tree.getWitness(recipientAccountIndex));
   tree.setLeaf(
-    BigInt(recipientAccount),
-    Poseidon.hash([recipientInitialBalance.add(amount), Poseidon.hash(recipientPublicKey.toFields())])
+    recipientAccountIndex,
+    Poseidon.hash([recipientNewBalance, Poseidon.hash(recipientPublicKey.toFields())])
   );
 
-  const signature1 = Signature.create(
+  // sender should sign [root || amount || recipient]
+  const signature = Signature.create(
     senderPrivateKey,
-    [zkapp.ledgerRoot.get(), amount].concat(recipientPublicKey.toFields())
+    [contract.ledgerRoot.get(), sendAmount].concat(recipientPublicKey.toFields())
   );
 
-  const txn1 = await Mina.transaction(owner, () => {
-    zkapp.sendBalance(
-      sendWitness1,
-      recipientWitness1,
-      senderInitialBalance,
-      recipientInitialBalance,
-      senderPublicKey,
-      recipientPublicKey,
-      signature1,
-      amount
-    );
-    zkapp.sign(ledgerZkAppPrivateKey);
-  });
-  await txn1.send();
+  // send transaction
+  console.log('\tSending funds...');
+  await contract.sendBalanceTx(
+    owner,
+    ledgerZkAppPrivateKey,
+    sendWitness,
+    recipientWitness,
+    senderInitialBalance,
+    recipientInitialBalance,
+    senderPublicKey,
+    recipientPublicKey,
+    signature,
+    sendAmount
+  );
 
   console.log(`LedgerContract: local tree root hash after send1: ${tree.getRoot()}`);
-  console.log(`LedgerContract: smart contract root hash after send1: ${zkapp.ledgerRoot.get()}`);
-
-  // --------------------------------------
-  // send from the sender to a recipient that wasn't in the account before
-
-  const newRecipientPublicKey = PrivateKey.random().toPublicKey();
-  const newRecipientAccount = 10000;
-
-  const sendWitness2 = new MerkleWitness20(tree.getWitness(BigInt(senderAccount)));
-  tree.setLeaf(
-    BigInt(senderAccount),
-    Poseidon.hash([newSenderBalance.sub(amount), Poseidon.hash(senderPublicKey.toFields())])
-  );
-  const recipientWitness2 = new MerkleWitness20(tree.getWitness(BigInt(newRecipientAccount)));
-
-  tree.setLeaf(BigInt(newRecipientAccount), Poseidon.hash([amount, Poseidon.hash(newRecipientPublicKey.toFields())]));
-
-  const signature2 = Signature.create(
-    senderPrivateKey,
-    [zkapp.ledgerRoot.get(), amount].concat(newRecipientPublicKey.toFields())
-  );
-
-  const txn2 = await Mina.transaction(owner, () => {
-    zkapp.sendBalance(
-      sendWitness2,
-      recipientWitness2,
-      newSenderBalance,
-      Field(0),
-      senderPublicKey,
-      newRecipientPublicKey,
-      signature2,
-      amount
-    );
-    zkapp.sign(ledgerZkAppPrivateKey);
-  });
-  await txn2.send();
-
-  console.log(`LedgerContract: local tree root hash after send2: ${tree.getRoot()}`);
-  console.log(`LedgerContract: smart contract root hash after send2: ${zkapp.ledgerRoot.get()}`);
+  console.log(`LedgerContract: smart contract root hash after send1: ${contract.ledgerRoot.get()}`);
 }

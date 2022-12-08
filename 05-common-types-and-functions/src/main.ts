@@ -12,29 +12,34 @@ async function main() {
   const owner = localBC.testAccounts[0].privateKey;
 
   // simple types
-  // boolExample();
-  // signedNumExample();
-  // charExample();
+  console.log('\n===== SIMPLE TYPES =====');
+  boolExample();
+  signedNumExample();
+  charExample();
 
   // advanced types
-  // stringExample();
-
-  // demo of all types
-  // demonstration();
+  console.log('\n===== ADVANCED TYPES =====');
+  stringExample();
+  demonstration();
 
   // class (struct) example
-  // pointExample();
+  console.log('\n===== STRUCT TYPE =====');
+  pointExample();
 
   // circuit logic flow if / switch example
-  // ifAndSwitchExample();
+  console.log('\n===== IF & SWITCH =====');
+  ifAndSwitchExample();
 
   // merkle tree example
-  // await basicMerkleTreeExample(owner);
+  console.log('\n===== MERKLE TREE =====');
+  await basicMerkleTreeExample(owner);
 
   // merkle map example
-  // await basicMerkleMapExample(owner);
+  console.log('\n===== MERKLE MAP =====');
+  await basicMerkleMapExample(owner);
 
   // ledger contract example
+  console.log('\n===== LEDGER WITH MERKLE TREE =====');
   await ledgerContractExample(owner);
 
   await finish();

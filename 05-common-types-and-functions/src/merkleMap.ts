@@ -42,7 +42,7 @@ export class BasicMerkleMapContract extends SmartContract {
     incrementAmount.assertLt(Field(10));
 
     // compute the root after incrementing & update state
-    const [rootAfter, _] = keyWitness.computeRootAndKey(valueBefore.add(incrementAmount));
+    const rootAfter = keyWitness.computeRootAndKey(valueBefore.add(incrementAmount))[0];
     this.mapRoot.set(rootAfter);
   }
 
@@ -57,16 +57,16 @@ export class BasicMerkleMapContract extends SmartContract {
     const zkAppPrivateKey = PrivateKey.random();
     const zkAppAddress = zkAppPrivateKey.toPublicKey();
 
-    // create an instance of our Square smart contract and deploy it to zkAppAddress
+    // create an instance of our smart contract and deploy it to zkAppAddress
     const contract = new BasicMerkleMapContract(zkAppAddress);
     const deployTxn = await Mina.transaction(owner, () => {
       AccountUpdate.fundNewAccount(owner);
-      // contract.requireSignature();
       contract.deploy({ zkappKey: zkAppPrivateKey });
       contract.initState(map.getRoot());
-      contract.sign(zkAppPrivateKey);
+      // contract.sign(zkAppPrivateKey); // deprecated
+      contract.requireSignature();
     });
-    await deployTxn.send();
+    await deployTxn.sign([zkAppPrivateKey]).send();
     console.log('contract deployed.');
 
     return [contract, zkAppPrivateKey];
@@ -94,9 +94,10 @@ export class BasicMerkleMapContract extends SmartContract {
         Field(0), // leafs in new trees start at a state of 0
         incrementAmount
       );
-      this.sign(zkAppPrivateKey);
+      // this.sign(zkAppPrivateKey);
+      this.requireSignature();
     });
-    await tx.send();
+    await tx.sign([zkAppPrivateKey]).send();
   }
 }
 

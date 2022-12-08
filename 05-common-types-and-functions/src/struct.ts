@@ -1,4 +1,4 @@
-import { Field, arrayProp, Struct } from 'snarkyjs';
+import { Field, Struct } from 'snarkyjs';
 
 /**
  * A point structure: a point (x, y) with coordinate field elements

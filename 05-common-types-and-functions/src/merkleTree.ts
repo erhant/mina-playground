@@ -16,7 +16,6 @@ import {
 // The height variable determines how many leaves are available to your application.
 // A height of 20 for example will lead to a tree with 2^(20-1), or 524,288 leaves.
 const TREE_HEIGHT = 20;
-
 class MerkleWitness20 extends MerkleWitness(TREE_HEIGHT) {}
 
 export class BasicMerkleTreeContract extends SmartContract {
@@ -62,16 +61,16 @@ export class BasicMerkleTreeContract extends SmartContract {
     const zkAppPrivateKey = PrivateKey.random();
     const zkAppAddress = zkAppPrivateKey.toPublicKey();
 
-    // create an instance of our Square smart contract and deploy it to zkAppAddress
+    // create an instance of our smart contract and deploy it to zkAppAddress
     const contract = new BasicMerkleTreeContract(zkAppAddress);
     const deployTxn = await Mina.transaction(owner, () => {
       AccountUpdate.fundNewAccount(owner);
-      // contract.requireSignature();
       contract.deploy({ zkappKey: zkAppPrivateKey });
       contract.initState(tree.getRoot());
-      contract.sign(zkAppPrivateKey);
+      // contract.sign(zkAppPrivateKey); // deprecated
+      contract.requireSignature();
     });
-    await deployTxn.send();
+    await deployTxn.sign([zkAppPrivateKey]).send();
     console.log('contract deployed.');
 
     return [contract, zkAppPrivateKey];
@@ -86,16 +85,15 @@ export class BasicMerkleTreeContract extends SmartContract {
    */
   async updateTx(account: PrivateKey, zkAppPrivateKey: PrivateKey, witness: MerkleWitness20, incrementAmount: Field) {
     const tx = await Mina.transaction(account, () => {
-      // contract.requireSignature();
       this.update(
         witness,
         Field(0), // leafs in new trees start at a state of 0
         incrementAmount
       );
-      this.sign(zkAppPrivateKey);
+      // this.sign(zkAppPrivateKey);
+      this.requireSignature();
     });
-    // await tx.sign([zkAppPrivateKey]).send();
-    await tx.send();
+    await tx.sign([zkAppPrivateKey]).send();
   }
 }
 

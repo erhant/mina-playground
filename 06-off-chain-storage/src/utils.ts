@@ -62,6 +62,7 @@ export const makeAndSendTransaction = async <State extends ToString>({
   });
 
   // fill in the proof - this can take a while...
+  // TODO: use console.time
   console.log('Creating an execution proof...');
   const time0 = Date.now();
   await transaction.prove();

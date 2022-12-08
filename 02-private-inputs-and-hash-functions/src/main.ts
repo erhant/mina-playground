@@ -17,7 +17,7 @@ async function main() {
   console.log('state after init:', contract.x.get().toString());
 
   // make a transaction
-  await contract.updateTx(owner, zkAppPrivateKey, salt, Field(750));
+  await contract.incrementTx(owner, zkAppPrivateKey, salt, Field(750));
 
   // check the new state
   console.log('state after txn1:', contract.x.get().toString());

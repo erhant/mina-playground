@@ -42,14 +42,13 @@ export class IncrementSecret extends SmartContract {
    * @param salt salt
    * @param secret secret
    */
-  async updateTx(account: PrivateKey, zkAppPrivateKey: PrivateKey, salt: Field, secret: Field) {
+  async incrementTx(account: PrivateKey, zkAppPrivateKey: PrivateKey, salt: Field, secret: Field) {
     const tx = await Mina.transaction(account, () => {
-      // contract.requireSignature();
       this.incrementSecret(salt, secret);
-      this.sign(zkAppPrivateKey);
+      // this.sign(zkAppPrivateKey);
+      this.requireSignature();
     });
-    // await tx.sign([zkAppPrivateKey]).send();
-    await tx.send();
+    await tx.sign([zkAppPrivateKey]).send();
   }
 
   /**
@@ -68,12 +67,12 @@ export class IncrementSecret extends SmartContract {
     const contract = new IncrementSecret(zkAppAddress);
     const deployTxn = await Mina.transaction(owner, () => {
       AccountUpdate.fundNewAccount(owner);
-      // contract.requireSignature();
       contract.deploy({ zkappKey: zkAppPrivateKey });
       contract.initState(salt, firstSecret);
-      contract.sign(zkAppPrivateKey);
+      //contract.sign(zkAppPrivateKey);
+      contract.requireSignature();
     });
-    await deployTxn.send();
+    await deployTxn.sign([zkAppPrivateKey]).send();
     console.log('contract deployed.');
 
     return [contract, zkAppPrivateKey];

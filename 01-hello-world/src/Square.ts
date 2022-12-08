@@ -54,12 +54,11 @@ export class Square extends SmartContract {
    */
   async updateTx(account: PrivateKey, zkAppPrivateKey: PrivateKey, newValue: Field) {
     const tx = await Mina.transaction(account, () => {
-      //this.requireSignature();
       this.update(newValue);
-      this.sign(zkAppPrivateKey); // depracated, use tx.sign
+      // this.sign(zkAppPrivateKey); // depracated, use tx.sign
+      this.requireSignature();
     });
-    // await tx.sign([zkAppPrivateKey]).send();
-    await tx.send();
+    await tx.sign([zkAppPrivateKey]).send();
   }
 
   /**
@@ -76,11 +75,11 @@ export class Square extends SmartContract {
     const contract = new Square(zkAppAddress);
     const deployTxn = await Mina.transaction(owner, () => {
       AccountUpdate.fundNewAccount(owner); // pays for the fee
-      // contract.requireSignature();
       contract.deploy({ zkappKey: zkAppPrivateKey });
       // contract.sign(zkAppPrivateKey); // depracated
+      contract.requireSignature();
     });
-    await deployTxn.send();
+    await deployTxn.sign([zkAppPrivateKey]).send();
     console.log('contract deployed.');
 
     return [contract, zkAppPrivateKey];
