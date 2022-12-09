@@ -39,10 +39,8 @@ async function incrementIndex(
   index: bigint,
   incrementAmount: Field
 ) {
-  // select a random index for the sake of tutorial
-  // const index = BigInt(Math.floor(Math.random() * 4));
-
-  // get the existing tree
+  // get the existing tree from the storage, first as index-to-fields
+  // and then as the actual tree
   const treeRoot = zkapp.storageTreeRoot.get();
   const idx2fields = await OffChainStorage.get(
     STORAGE_SERVER_ADDR,

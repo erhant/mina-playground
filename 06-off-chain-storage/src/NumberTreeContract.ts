@@ -29,8 +29,11 @@ export class NumberTreeContract extends SmartContract {
 
   @method initState(storageServerPublicKey: PublicKey) {
     this.storageServerPublicKey.set(storageServerPublicKey);
+
+    // initial number is 0
     this.storageNumber.set(Field(0));
 
+    // initial root is an empty MerkleTree8 root
     const emptyTreeRoot = new MerkleTree(8).getRoot();
     this.storageTreeRoot.set(emptyTreeRoot);
   }
@@ -43,7 +46,7 @@ export class NumberTreeContract extends SmartContract {
     storedNewRootNumber: Field,
     storedNewRootSignature: Signature
   ) {
-    // assert current state
+    // assert current states
     const storedRoot = this.storageTreeRoot.get();
     this.storageTreeRoot.assertEquals(storedRoot);
 

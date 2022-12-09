@@ -71,24 +71,19 @@ export class LedgerContract extends SmartContract {
     );
 
     // compute the possible recipient states before receiving
+    // (a) existing recipient
     const rootRecipientBefore = recipientWitness.calculateRoot(
       Poseidon.hash([Field(recipientBalanceBefore), Poseidon.hash(recipientPublicKey.toFields())])
     );
+    // (b) new recipient (no public key)
     const rootRecipientBeforeEmpty = recipientWitness.calculateRoot(Field(0));
     const isNewRecipientAccount = rootSenderAfter.equals(rootRecipientBeforeEmpty);
 
     // check requirements on the recipient state before receiving
-    // TODO: can we refactor this into a simpler Circuit.if?
     const recipientAccountPassesRequirements = Circuit.if(
       isNewRecipientAccount,
-      (() => {
-        // new account, balance before must be zero
-        return recipientBalanceBefore.equals(Field(0));
-      })(),
-      (() => {
-        // existing account, check existing account witness
-        return rootSenderAfter.equals(rootRecipientBefore);
-      })()
+      recipientBalanceBefore.equals(Field(0)), // new account has 0 balance
+      rootSenderAfter.equals(rootRecipientBefore) // (?)
     );
 
     recipientAccountPassesRequirements.assertTrue();

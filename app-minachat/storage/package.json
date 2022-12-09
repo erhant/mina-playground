@@ -1,6 +1,6 @@
 {
-  "name": "mina-chat-contracts",
-  "version": "0.1.0",
+  "name": "minachat-storage",
+  "version": "0.2.0",
   "description": "",
   "author": "",
   "license": "Apache-2.0",
@@ -15,12 +15,12 @@
   "types": "build/src/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "buildw": "tsc -p tsconfig.json --watch",
     "coverage": "node --experimental-vm-modules --experimental-wasm-modules --experimental-wasm-threads node_modules/jest/bin/jest.js --coverage",
     "format": "prettier --write --ignore-unknown **/*",
     "test": "node --experimental-vm-modules --experimental-wasm-modules --experimental-wasm-threads node_modules/jest/bin/jest.js",
     "testw": "node --experimental-vm-modules --experimental-wasm-modules --experimental-wasm-threads node_modules/jest/bin/jest.js --watch",
-    "lint": "npx eslint src/* --fix"
+    "lint": "npx eslint src/* --fix",
+    "server": "npm run build && node --enable-source-maps build/src/storageServer.js"
   },
   "lint-staged": {
     "**/*": [
@@ -31,23 +31,32 @@
   "devDependencies": {
     "@babel/preset-env": "^7.16.4",
     "@babel/preset-typescript": "^7.16.0",
+    "@types/cors": "^2.8.12",
+    "@types/express": "^4.17.14",
     "@types/jest": "^27.0.3",
     "@typescript-eslint/eslint-plugin": "^5.5.0",
     "@typescript-eslint/parser": "^5.5.0",
     "eslint": "^8.7.0",
     "eslint-plugin-snarkyjs": "^0.1.0",
+    "husky": "^7.0.1",
+    "i": "^0.3.7",
     "jest": "^27.3.1",
     "lint-staged": "^11.0.1",
+    "npm": "^8.19.3",
     "prettier": "^2.3.2",
+    "source-map-support": "^0.5.21",
     "ts-jest": "^27.0.7",
-    "typescript": "^4.7.2",
-    "xmlhttprequest-ts": "^1.0.1"
+    "typescript": "^4.7.2"
   },
-  "peerDependencies": {
-    "snarkyjs": "^0.7.3"
-  },
+  "peerDependencies": {},
   "dependencies": {
-    "axios": "^1.2.1",
-    "snarkyjs": "^0.7.3"
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "http-status-codes": "^2.2.0",
+    "joi": "^17.7.0",
+    "snarkyjs": "^0.7.3",
+    "xmlhttprequest": "^1.8.0",
+    "xmlhttprequest-ts": "^1.0.1"
   }
 }
