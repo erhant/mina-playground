@@ -63,7 +63,7 @@ export class OffchainStorageAPI {
    */
   async setItems(height: number, idx2fields: Map<bigint, Field[]>): Promise<[Field, Signature]> {
     // convert idx2fields to items (for the query)
-    const items = [];
+    const items: Array<[string, string[]]> = [];
     for (let [idx, fields] of idx2fields) {
       items.push([idx.toString(), fields.map((f) => f.toJSON())]);
     }
@@ -74,10 +74,13 @@ export class OffchainStorageAPI {
       items,
       height,
     });
+    // console.log(res.data);
 
     // parse response
     const newRootNumber = Field(res.data.data.newRootNumber);
+    // console.log('NEW ROOT NUM:', newRootNumber.toString());
     const newRootSignature = Signature.fromFields(res.data.data.newRootSignature.map((s: string) => Field.fromJSON(s)));
+    // console.log('NEW ROOT SIGN:', newRootSignature.toJSON());
     return [newRootNumber, newRootSignature];
   }
 }

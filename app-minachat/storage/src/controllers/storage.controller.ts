@@ -19,7 +19,7 @@ export async function getItems(request: Request, response: Response) {
 export async function setItems(request: Request, response: Response) {
   const height: number = request.body.height;
   const items: Array<[string, string[]]> = request.body.items;
-  const zkAppAddress58: string = request.body.zkAppAddress;
+  const zkAppAddress58: string = request.body.zkAppAddress58;
 
   // check that given height does not exceed maximum
   if (height > config.Storage.MAX_HEIGHT) {
@@ -31,7 +31,7 @@ export async function setItems(request: Request, response: Response) {
   }
 
   // check item count (should be max 2^{height}-1)
-  if (items.length > 1 << (height - 1)) {
+  if (items.length > 2 ** height - 1) {
     respond.failure(response, 'Too many items for the given height.');
     return;
   }

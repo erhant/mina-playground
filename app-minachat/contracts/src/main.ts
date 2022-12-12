@@ -19,14 +19,15 @@ const KEY_TREE_HEIGHT = 32;
 
 const STORAGE_SERVER_ADDR = 'http://localhost:3001';
 const USE_LOCAL = true;
-const TX_FEE = 0.1;
+const TX_FEE = 100;
 
 async function main() {
   const owner = await setup();
 
-  // prepare keys
+  // prepare zkapp keys
   const zkappPrivateKey = USE_LOCAL ? PrivateKey.random() : owner;
   const zkappPublicKey = zkappPrivateKey.toPublicKey();
+  console.log('zkApp Public Key:', zkappPublicKey.toBase58());
 
   // prepare server key
   const offchainStorage = new OffchainStorageAPI(STORAGE_SERVER_ADDR, zkappPublicKey);
@@ -54,8 +55,9 @@ async function initializeKeys(
 
   // index is (senderPk + recipientPk).x.toFields()
   const indexKey = PublicKey.fromGroup(sender.toGroup().add(recipient.toGroup()));
-  const index = indexKey.x.toBigInt() % BigInt(1 << KEY_TREE_HEIGHT);
-  const newValue = PrivateKey.random().toFields()[0]; // todooooo
+  const index = 345n; // indexKey.x.toBigInt() % BigInt(1 << KEY_TREE_HEIGHT);
+  const newValue = Field.random(); // a random field element is private key for AES
+  console.log('Setting:', index.toString(), 'to', newValue.toString());
 
   // current root
   const root = contract.keysRoot.get();
@@ -91,11 +93,20 @@ async function initializeKeys(
   // }
 
   // create transaction
-  const tx = await Mina.transaction({ feePayerKey: owner, fee: TX_FEE }, () => {
-    contract.update(leafIsEmpty, oldValue, newValue, circuitWitness, newRootNumber, newRootSignature);
-    // contract.sign(zkappPrivateKey);
-    contract.requireSignature();
-  });
+  console.log('Creating tx...');
+  let tx;
+  try {
+    tx = await Mina.transaction({ feePayerKey: owner, fee: TX_FEE }, () => {
+      contract.update(leafIsEmpty, oldValue, newValue, circuitWitness, newRootNumber, newRootSignature);
+      contract.sign(zkappPrivateKey);
+      // contract.requireSignature();
+    });
+  } catch (err) {
+    console.log('ERROR!', err);
+    return;
+  }
+
+  console.log('Created tx.');
 
   // create a proof for transaction
   // NOTE: maybe sign before the proof?
@@ -108,7 +119,7 @@ async function initializeKeys(
 
   // send transaction
   console.log('Sending the transaction...');
-  const res = await tx.sign([zkappPrivateKey]).send();
+  const res = await tx.send();
   console.log('Hash:', res.hash());
 }
 

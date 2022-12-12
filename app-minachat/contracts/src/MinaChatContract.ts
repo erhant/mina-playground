@@ -50,6 +50,7 @@ export class MinaChatContract extends SmartContract {
     storedNewRootNumber: Field,
     storedNewRootSignature: Signature
   ) {
+    console.log('Asserting states...');
     let keysRoot = this.keysRoot.get();
     this.keysRoot.assertEquals(keysRoot);
 
@@ -61,7 +62,7 @@ export class MinaChatContract extends SmartContract {
 
     // newLeaf can be a function of the existing leaf
     // newLeaf[0].assertGt(leaf[0]);
-
+    console.log('Asserting root updates...');
     const storedNewRoot = this.assertRootUpdates(
       keysNumber,
       keysRoot,
@@ -78,8 +79,10 @@ export class MinaChatContract extends SmartContract {
       storedNewRootSignature
     );
 
+    console.log('Updating state...');
     this.keysRoot.set(storedNewRoot);
     this.keysNumber.set(storedNewRootNumber);
+    console.log('Done!');
   }
 
   assertRootUpdates(
@@ -94,15 +97,18 @@ export class MinaChatContract extends SmartContract {
       const { leaf, leafIsEmpty, newLeaf, newLeafIsEmpty, leafWitness } = updates[i];
 
       // check the root is starting from the correct state
+      console.log('Checking current leaf...');
       const currentLeafHash = Circuit.if(leafIsEmpty, EMPTY_LEAF, Poseidon.hash(leaf));
       leafWitness.calculateRoot(currentLeafHash).assertEquals(localRoot);
 
       // calculate the new root after setting the leaf
+      console.log('Checking new leaf...');
       const newLeafHash = Circuit.if(newLeafIsEmpty, EMPTY_LEAF, Poseidon.hash(newLeaf));
       localRoot = leafWitness.calculateRoot(newLeafHash);
     }
 
     // check the server is storing the stored new root
+    console.log('Verifying signature...');
     serverNewRootSignature.verify(this.serverPublicKey.get(), [localRoot, serverNewRootNumber]).assertTrue();
     localRootNumber.assertLt(serverNewRootNumber);
     return localRoot;
