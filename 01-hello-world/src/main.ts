@@ -34,9 +34,10 @@ async function main() {
  * @returns fee payer account
  */
 async function setup() {
-  console.log('Loading SnarkyJS...');
+  const LABEL = 'Loading SnarkyJS:';
+  console.time(LABEL);
   await isReady;
-  console.log('SnarkyJS loaded!\n');
+  console.timeEnd(LABEL);
 
   const localBC = Mina.LocalBlockchain();
   Mina.setActiveInstance(localBC);
@@ -47,9 +48,10 @@ async function setup() {
  * Terminates Mina snarkyjs.
  */
 async function finish() {
-  console.log('\nShutting down...');
+  const LABEL = 'Shutting down:';
+  console.time(LABEL);
   await shutdown();
-  console.log('bye bye.');
+  console.timeEnd(LABEL);
 }
 
 // dont use require.module here

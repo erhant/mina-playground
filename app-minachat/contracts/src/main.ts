@@ -22,9 +22,7 @@ const USE_LOCAL = true;
 const TX_FEE = 0.1;
 
 async function main() {
-  console.log('preeee');
   const owner = await setup();
-  console.log('posttt');
 
   // prepare keys
   const zkappPrivateKey = USE_LOCAL ? PrivateKey.random() : owner;
@@ -38,8 +36,8 @@ async function main() {
   // prepare contract
   const contract = await prepareContract(owner, zkappPrivateKey, zkappPublicKey, serverPublicKey);
 
-  // console.log('init keysss!');
-  // await initializeKeys(owner, contract, zkappPrivateKey, offchainStorage);
+  console.log('init keysss!');
+  await initializeKeys(owner, contract, zkappPrivateKey, offchainStorage);
 
   await finish();
 }
@@ -56,8 +54,8 @@ async function initializeKeys(
 
   // index is (senderPk + recipientPk).x.toFields()
   const indexKey = PublicKey.fromGroup(sender.toGroup().add(recipient.toGroup()));
-  const index = indexKey.x.toBigInt();
-  const newValue = PrivateKey.random().toFields();
+  const index = indexKey.x.toBigInt() % BigInt(1 << KEY_TREE_HEIGHT);
+  const newValue = PrivateKey.random().toFields()[0]; // todooooo
 
   // current root
   const root = contract.keysRoot.get();
@@ -73,16 +71,16 @@ async function initializeKeys(
 
   // check current value at index
   const leafIsEmpty = Bool(!idx2fields.has(index));
-  const oldValue: Field[] = leafIsEmpty.toBoolean() ? [Field(0)] : idx2fields.get(index)!;
+  const oldValue: Field = leafIsEmpty.toBoolean() ? Field(0) : idx2fields.get(index)![0];
 
   // make a witness on the current tree
   const witness = tree.getWitness(index);
   const circuitWitness = new OffchainStorageMerkleWitness(witness);
 
   // update tree & get new root
-  tree.setLeaf(index, Poseidon.hash(newValue));
+  tree.setLeaf(index, Poseidon.hash([newValue]));
   const newRoot = tree.getRoot();
-  idx2fields.set(index, newValue);
+  idx2fields.set(index, [newValue]);
 
   // store off-chain
   const [newRootNumber, newRootSignature] = await offchainStorage.setItems(KEY_TREE_HEIGHT, idx2fields);

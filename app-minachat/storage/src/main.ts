@@ -23,6 +23,11 @@ export async function launchServer(): Promise<Server> {
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
 
+  // logs the endpoint calls with timestamps
+  app.use(function (req, res, next) {
+    logger.log('\t  >>>', new Date().toTimeString(), req.originalUrl, '\t');
+    next();
+  });
   // setup clients
   const setupSuccess = await setupClients();
 

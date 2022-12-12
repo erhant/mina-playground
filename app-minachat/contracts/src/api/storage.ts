@@ -26,7 +26,7 @@ export class OffchainStorageAPI {
    */
   async getServerPublicKey(): Promise<PublicKey> {
     const res = await this.axios.get('/getPublicKey/');
-    return PublicKey.fromBase58(res.data.publicKey);
+    return PublicKey.fromBase58(res.data.data.publicKey);
   }
 
   /**
@@ -42,7 +42,7 @@ export class OffchainStorageAPI {
     if (!new MerkleTree(height).getRoot().equals(root).toBoolean()) {
       // if not, get items from off-chain storage
       const res = await this.axios.get(`/storage/getItems?zkAppAddress=${this.zkAppAddress58}&root=${root}`);
-      const items = res.data.items as Array<[string, string[]]>;
+      const items = res.data.data.items as Array<[string, string[]]>;
       items.forEach(([idx, fieldStrs]) => {
         idx2fields.set(
           BigInt(idx),
@@ -76,8 +76,8 @@ export class OffchainStorageAPI {
     });
 
     // parse response
-    const newRootNumber = Field(res.data.newRootNumber);
-    const newRootSignature = Signature.fromFields(res.data.newRootSignature.map((s: string) => Field.fromJSON(s)));
+    const newRootNumber = Field(res.data.data.newRootNumber);
+    const newRootSignature = Signature.fromFields(res.data.data.newRootSignature.map((s: string) => Field.fromJSON(s)));
     return [newRootNumber, newRootSignature];
   }
 }

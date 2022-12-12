@@ -1,5 +1,5 @@
 import { IncrementSecret } from './IncrementSecret.js';
-import { isReady, shutdown, Field, Mina, PrivateKey } from 'snarkyjs';
+import { isReady, shutdown, Field, Mina } from 'snarkyjs';
 
 async function main() {
   const owner = await setup();
@@ -26,10 +26,11 @@ async function main() {
  * Sets up Mina local blockchain.
  * @returns fee payer account
  */
-async function setup(): Promise<PrivateKey> {
-  console.log('Loading SnarkyJS...');
+async function setup() {
+  const LABEL = 'Loading SnarkyJS:';
+  console.time(LABEL);
   await isReady;
-  console.log('SnarkyJS loaded!\n');
+  console.timeEnd(LABEL);
 
   const localBC = Mina.LocalBlockchain();
   Mina.setActiveInstance(localBC);
@@ -40,9 +41,10 @@ async function setup(): Promise<PrivateKey> {
  * Terminates Mina snarkyjs.
  */
 async function finish() {
-  console.log('\nShutting down...');
+  const LABEL = 'Shutting down:';
+  console.time(LABEL);
   await shutdown();
-  console.log('bye bye.');
+  console.timeEnd(LABEL);
 }
 
 // dont use require.module here

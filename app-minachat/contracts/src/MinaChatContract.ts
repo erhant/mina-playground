@@ -16,9 +16,8 @@ import {
 } from 'snarkyjs';
 import type { TreeUpdateType } from './types';
 
-const EMPTY_LEAF = Field(0);
 const KEY_TREE_HEIGHT = 32;
-class MerkleWitnessForKeys extends MerkleWitness(KEY_TREE_HEIGHT) {}
+// class MerkleWitnessForKeys extends MerkleWitness(KEY_TREE_HEIGHT) {}
 export class OffchainStorageMerkleWitness extends MerkleWitness(KEY_TREE_HEIGHT) {}
 
 export class MinaChatContract extends SmartContract {
@@ -45,8 +44,8 @@ export class MinaChatContract extends SmartContract {
 
   @method update(
     leafIsEmpty: Bool,
-    oldValue: Field[],
-    newValue: Field[],
+    oldValue: Field,
+    newValue: Field,
     witness: OffchainStorageMerkleWitness,
     storedNewRootNumber: Field,
     storedNewRootSignature: Signature
@@ -68,9 +67,9 @@ export class MinaChatContract extends SmartContract {
       keysRoot,
       [
         {
-          leaf: oldValue,
+          leaf: [oldValue],
           leafIsEmpty,
-          newLeaf: newValue,
+          newLeaf: [newValue],
           newLeafIsEmpty: Bool(false),
           leafWitness: witness,
         },
@@ -90,6 +89,7 @@ export class MinaChatContract extends SmartContract {
     serverNewRootNumber: Field,
     serverNewRootSignature: Signature
   ): Field {
+    const EMPTY_LEAF = Field(0);
     for (let i = 0; i < updates.length; ++i) {
       const { leaf, leafIsEmpty, newLeaf, newLeafIsEmpty, leafWitness } = updates[i];
 
