@@ -15,10 +15,10 @@ import {
   Bool,
 } from 'snarkyjs';
 import type { TreeUpdateType } from './types';
+import constants from './constants/index.js';
 
-const KEY_TREE_HEIGHT = 32;
 // class MerkleWitnessForKeys extends MerkleWitness(KEY_TREE_HEIGHT) {}
-export class OffchainStorageMerkleWitness extends MerkleWitness(KEY_TREE_HEIGHT) {}
+export class OffchainStorageMerkleWitness extends MerkleWitness(constants.KEY_TREE_HEIGHT) {}
 
 export class MinaChatContract extends SmartContract {
   // off-chain storage public key
@@ -39,7 +39,7 @@ export class MinaChatContract extends SmartContract {
     this.serverPublicKey.set(serverPublicKey);
 
     this.keysNumber.set(Field(0));
-    this.keysRoot.set(new MerkleTree(KEY_TREE_HEIGHT).getRoot());
+    this.keysRoot.set(new MerkleTree(constants.KEY_TREE_HEIGHT).getRoot());
   }
 
   @method update(

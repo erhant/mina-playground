@@ -14,23 +14,18 @@ import {
   Poseidon,
 } from 'snarkyjs';
 import { OffchainStorageAPI } from './api/storage.js';
-
-const KEY_TREE_HEIGHT = 32;
-
-const STORAGE_SERVER_ADDR = 'http://localhost:3001';
-const USE_LOCAL = true;
-const TX_FEE = 100;
+import constants from './constants/index.js';
 
 async function main() {
   const owner = await setup();
 
   // prepare zkapp keys
-  const zkappPrivateKey = USE_LOCAL ? PrivateKey.random() : owner;
+  const zkappPrivateKey = constants.USE_LOCAL ? PrivateKey.random() : owner;
   const zkappPublicKey = zkappPrivateKey.toPublicKey();
   console.log('zkApp Public Key:', zkappPublicKey.toBase58());
 
   // prepare server key
-  const offchainStorage = new OffchainStorageAPI(STORAGE_SERVER_ADDR, zkappPublicKey);
+  const offchainStorage = new OffchainStorageAPI(constants.STORAGE_SERVER_ADDR, zkappPublicKey);
   const serverPublicKey = await offchainStorage.getServerPublicKey();
   console.log('Off-chain Server Public Key:', serverPublicKey.toBase58());
 
@@ -39,6 +34,9 @@ async function main() {
 
   console.log('init keysss!');
   await initializeKeys(owner, contract, zkappPrivateKey, offchainStorage);
+
+  console.log('gettin the key');
+  await getKeys(owner, contract, zkappPrivateKey, offchainStorage);
 
   await finish();
 }
@@ -55,7 +53,7 @@ async function initializeKeys(
 
   // index is (senderPk + recipientPk).x.toFields()
   const indexKey = PublicKey.fromGroup(sender.toGroup().add(recipient.toGroup()));
-  const index = 345n; // indexKey.x.toBigInt() % BigInt(1 << KEY_TREE_HEIGHT);
+  const index = indexKey.x.toBigInt();
   const newValue = Field.random(); // a random field element is private key for AES
   console.log('Setting:', index.toString(), 'to', newValue.toString());
 
@@ -63,10 +61,10 @@ async function initializeKeys(
   const root = contract.keysRoot.get();
 
   // get off-chain stored tree
-  const idx2fields = await offchainStorage.getItems(KEY_TREE_HEIGHT, root);
+  const idx2fields = await offchainStorage.getItems(constants.KEY_TREE_HEIGHT, root);
 
   // generate local tree
-  const tree = new MerkleTree(KEY_TREE_HEIGHT);
+  const tree = new MerkleTree(constants.KEY_TREE_HEIGHT);
   for (const [idx, fields] of idx2fields) {
     tree.setLeaf(idx, Poseidon.hash(fields));
   }
@@ -81,22 +79,22 @@ async function initializeKeys(
 
   // update tree & get new root
   tree.setLeaf(index, Poseidon.hash([newValue]));
-  const newRoot = tree.getRoot();
+  const newRoot = tree.getRoot(); // what to do with this guy?
   idx2fields.set(index, [newValue]);
 
   // store off-chain
-  const [newRootNumber, newRootSignature] = await offchainStorage.setItems(KEY_TREE_HEIGHT, idx2fields);
+  const [newRootNumber, newRootSignature] = await offchainStorage.setItems(constants.KEY_TREE_HEIGHT, idx2fields);
 
   // fetch account if not local
-  // if (!USE_LOCAL) {
-  //   await fetchAccount({ publicKey: deployerAccount.toPublicKey() });
-  // }
+  if (!constants.USE_LOCAL) {
+    await fetchAccount({ publicKey: owner.toPublicKey() });
+  }
 
   // create transaction
   console.log('Creating tx...');
   let tx;
   try {
-    tx = await Mina.transaction({ feePayerKey: owner, fee: TX_FEE }, () => {
+    tx = await Mina.transaction({ feePayerKey: owner, fee: constants.TX_FEE }, () => {
       contract.update(leafIsEmpty, oldValue, newValue, circuitWitness, newRootNumber, newRootSignature);
       contract.sign(zkappPrivateKey);
       // contract.requireSignature();
@@ -110,27 +108,45 @@ async function initializeKeys(
 
   // create a proof for transaction
   // NOTE: maybe sign before the proof?
-  // if (!USE_LOCAL) {
-  //   const LABEL = 'Creating an execution proof...';
-  //   console.time(LABEL);
-  //   await tx.prove();
-  //   console.timeEnd(LABEL);
-  // }
+  if (!constants.USE_LOCAL) {
+    const LABEL = 'Creating an execution proof...';
+    console.time(LABEL);
+    await tx.prove();
+    console.timeEnd(LABEL);
+  }
 
   // send transaction
   console.log('Sending the transaction...');
-  const res = await tx.send();
-  console.log('Hash:', res.hash());
+  await tx.send();
+  // console.log('Hash:', res.hash());
+}
+
+async function getKeys(
+  owner: PrivateKey,
+  contract: MinaChatContract,
+  zkappPrivateKey: PrivateKey,
+  offchainStorage: OffchainStorageAPI
+) {
+  // for the sake of example, the sender sends to themselves
+  const sender = owner.toPublicKey();
+  const recipient = owner.toPublicKey();
+
+  const root = contract.keysRoot.get();
+  const idx2fields = await offchainStorage.getItems(constants.KEY_TREE_HEIGHT, root);
+  const indexKey = PublicKey.fromGroup(sender.toGroup().add(recipient.toGroup()));
+  const index = indexKey.x.toBigInt();
+
+  console.log('GOT INDEX:', idx2fields.get(index)?.toString());
 }
 
 // Sets up Mina local blockchain / Berkeley network, returns the fee payer.
 async function setup(): Promise<PrivateKey> {
-  const LABEL = 'Loading SnarkyJS...';
+  const LABEL = 'Loading SnarkyJS:';
   console.time(LABEL);
   await isReady;
   console.timeEnd(LABEL);
 
-  if (USE_LOCAL) {
+  if (constants.USE_LOCAL) {
     // use local blockchain
     const localBC = Mina.LocalBlockchain();
     Mina.setActiveInstance(localBC);
@@ -158,7 +174,7 @@ async function prepareContract(
   serverPublicKey: PublicKey
 ): Promise<MinaChatContract> {
   // compile the contract if not local
-  if (!USE_LOCAL) {
+  if (!constants.USE_LOCAL) {
     console.log('Compiling smart contract...');
     await MinaChatContract.compile();
   }
@@ -166,7 +182,7 @@ async function prepareContract(
   // instantiate
   const contract = new MinaChatContract(zkappPublicKey);
 
-  if (USE_LOCAL) {
+  if (constants.USE_LOCAL) {
     // deploy to local network
     const tx = await Mina.transaction(owner, () => {
       AccountUpdate.fundNewAccount(owner);

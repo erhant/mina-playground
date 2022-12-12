@@ -19,9 +19,7 @@ class MinaClient implements Client {
   private serverPrivateKey: PrivateKey;
   private serverPublicKey: PublicKey;
 
-  private constructor() {
-    // TODO
-  }
+  private constructor() {}
 
   /// No async setup required
   public async setup(): Promise<void> {
@@ -85,11 +83,6 @@ class MinaClient implements Client {
 
   public sign(fields: Field[]): Signature {
     return Signature.create(this.serverPrivateKey, fields);
-    // let newRootSignature =
-    // [
-    //   newRoot,
-    //   Field(newRootNumber),
-    // ]);
   }
 }
 
