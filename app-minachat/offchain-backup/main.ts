@@ -1,4 +1,4 @@
-import { OffChainStorageTestContract } from './OffChainStorageTestContract.js';
+import { OffChainStorageTestContract } from "./OffChainStorageTestContract.js";
 import {
   isReady,
   Field,
@@ -10,12 +10,12 @@ import {
   Poseidon,
   fetchAccount,
   Bool,
-} from 'snarkyjs';
+} from "snarkyjs";
 
-import { OffChainStorage } from './index.js';
+import { OffChainStorage } from "./index.js";
 
 const height = 2;
-import XMLHttpRequestTs from 'xmlhttprequest-ts';
+import XMLHttpRequestTs from "xmlhttprequest-ts";
 const NodeXMLHttpRequest =
   XMLHttpRequestTs.XMLHttpRequest as any as typeof XMLHttpRequest;
 
@@ -24,7 +24,7 @@ let transactionFee = 10_000_000;
 (async function main() {
   await isReady;
 
-  console.log('SnarkyJS loaded');
+  console.log("SnarkyJS loaded");
 
   const USE_LOCAL = true;
 
@@ -33,7 +33,7 @@ let transactionFee = 10_000_000;
     Mina.setActiveInstance(Local);
   } else {
     const Berkeley = Mina.Network(
-      'https://proxy.berkeley.minaexplorer.com/graphql'
+      "https://proxy.berkeley.minaexplorer.com/graphql"
     );
     Mina.setActiveInstance(Berkeley);
   }
@@ -59,14 +59,14 @@ let transactionFee = 10_000_000;
 
   // ----------------------------------------------------
 
-  class OffchainStorageMerkleWitness extends MerkleWitness(height) {}
+  class OffchainStorageMerkleWitness extends MerkleWitness(height) {} // why 2?
 
   // create a destination we will deploy the smart contract to
   const zkAppAccount = zkAppPrivateKey.toPublicKey();
 
-  console.log('using zkApp account at', zkAppAccount.toBase58());
+  console.log("using zkApp account at", zkAppAccount.toBase58());
 
-  const serverAddress = 'http://localhost:3001';
+  const serverAddress = "http://localhost:3001";
 
   const serverPublicKey = await OffChainStorage.getPublicKey(
     serverAddress,
@@ -74,7 +74,7 @@ let transactionFee = 10_000_000;
   );
 
   if (!USE_LOCAL) {
-    console.log('Compiling smart contract...');
+    console.log("Compiling smart contract...");
     await OffChainStorageTestContract.compile();
   }
 
@@ -91,8 +91,9 @@ let transactionFee = 10_000_000;
     serverPublicKey
   );
 
+  // deploy zkapp if not deployed before
   if (!isDeployed) {
-    console.log('Deploying zkapp...');
+    console.log("Deploying zkapp...");
     const deploy_txn = await Mina.transaction(
       { feePayerKey: deployerAccount, fee: transactionFee },
       () => {
@@ -106,11 +107,11 @@ let transactionFee = 10_000_000;
     if (!USE_LOCAL) {
       const hash = await res.hash(); // This will change in a future version of SnarkyJS
       if (hash == null) {
-        console.log('error sending transaction (see above)');
+        console.log("error sending transaction (see above)");
       } else {
         console.log(
-          'See deploy transaction at',
-          'https://berkeley.minaexplorer.com/transaction/' + hash
+          "See deploy transaction at",
+          "https://berkeley.minaexplorer.com/transaction/" + hash
         );
       }
     } else {
@@ -118,8 +119,9 @@ let transactionFee = 10_000_000;
     }
   }
 
+  // if deploying, wait for it to be deployed
   while (!isDeployed) {
-    console.log('waiting for zkApp to be deployed...');
+    console.log("waiting for zkApp to be deployed...");
     let response = await fetchAccount({ publicKey: zkAppAccount });
     isDeployed = response.error == null;
     await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -132,7 +134,7 @@ let transactionFee = 10_000_000;
   } else {
     root = (await zkAppInstance.root.fetch())!;
   }
-  console.log('state after init:', root.toString());
+  console.log("state after init:", root.toString());
 
   const make_transaction = async (root: Field) => {
     const tree = new MerkleTree(height);
@@ -155,25 +157,28 @@ let transactionFee = 10_000_000;
     const oldNum = leafIsEmpty.toBoolean()
       ? Field(0)
       : idx2fields.get(index)![0];
-    const newNum = oldNum.add(1);
+    const newNum = oldNum.add(1); // increments by 1
     const witness = tree.getWitness(BigInt(index));
     const circuitWitness = new OffchainStorageMerkleWitness(witness);
     tree.setLeaf(BigInt(index), Poseidon.hash([newNum]));
     const newRoot = tree.getRoot();
 
     console.log(
-      'updating',
+      "updating",
       index,
-      'from',
+      "from",
       oldNum.toString(),
-      'to',
+      "to",
       newNum.toString()
     );
 
-    console.log('updating to new root', newRoot.toString());
-    console.log('root from ', zkAppInstance.root.get().toString());
+    console.log("updating to new root", newRoot.toString()); // new root
+    console.log("root from ", zkAppInstance.root.get().toString()); // old root
 
+    // update local tree
     idx2fields.set(index, [newNum]);
+
+    // store these on the off-chain storage
     const [newRootNumber, newRootSignature] =
       await OffChainStorage.requestStore(
         serverAddress,
@@ -183,11 +188,12 @@ let transactionFee = 10_000_000;
         NodeXMLHttpRequest
       );
 
-    // ----------------------------------------------------
-
+    // fetch account if not local
     if (!USE_LOCAL) {
       await fetchAccount({ publicKey: deployerAccount.toPublicKey() });
     }
+
+    // create transaction
     const txn1 = await Mina.transaction(
       { feePayerKey: deployerAccount, fee: transactionFee },
       () => {
@@ -204,49 +210,47 @@ let transactionFee = 10_000_000;
       }
     );
 
+    // create proof
     if (!USE_LOCAL) {
-      console.log('Creating an execution proof...');
+      console.log("Creating an execution proof...");
       const time0 = Date.now();
       await txn1.prove();
       const time1 = Date.now();
-      console.log('creating proof took', (time1 - time0) / 1e3, 'seconds');
+      console.log("creating proof took", (time1 - time0) / 1e3, "seconds");
     }
 
-    console.log('Sending the transaction...');
+    // send transaction
+    console.log("Sending the transaction...");
     const res = await txn1.send();
 
+    let root2: Field;
     if (!USE_LOCAL) {
       const hash = await res.hash(); // This will change in a future version of SnarkyJS
       if (hash == null) {
-        console.log('error sending transaction (see above)');
+        console.log("error sending transaction (see above)");
       } else {
         console.log(
-          'See transaction at',
-          'https://berkeley.minaexplorer.com/transaction/' + hash
+          "See transaction at",
+          "https://berkeley.minaexplorer.com/transaction/" + hash
         );
       }
 
       let stateChange = false;
 
-      let root2;
       while (!stateChange) {
         console.log(
-          'waiting for zkApp state to change... (current state: ',
-          root.toString() + ')'
+          "waiting for zkApp state to change... (current state: ",
+          root.toString() + ")"
         );
         await new Promise((resolve) => setTimeout(resolve, 5000));
         root2 = await zkAppInstance.root.fetch();
         stateChange = root2 != null && root2.equals(root).not().toBoolean();
       }
+    } else {
+      root2 = await zkAppInstance.root.get();
     }
 
-    let root2;
-    if (USE_LOCAL) {
-      root2 = await zkAppInstance.root.get();
-    } else {
-      root2 = (await zkAppInstance.root.fetch())!;
-    }
-    console.log('state after txn:', root2.toString());
+    console.log("state after txn:", root2.toString());
 
     return root2;
   };
@@ -262,5 +266,5 @@ let transactionFee = 10_000_000;
 
   // await shutdown();
 })().catch((e) => {
-  console.log('error', e);
+  console.log("error", e);
 });

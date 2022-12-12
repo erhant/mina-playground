@@ -1,6 +1,6 @@
 import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
-import { respond } from '../utilities/respond';
+import { respond } from '../utilities/respond.js';
 import { StatusCodes } from 'http-status-codes';
 
 /**

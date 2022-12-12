@@ -1,8 +1,19 @@
-import config from '../configurations';
-import { Client } from '.';
-import { isReady, Mina, PrivateKey, PublicKey, shutdown } from 'snarkyjs';
+import config from '../configurations/index.js';
+import { Client } from './index.js';
+import {
+  Field,
+  isReady,
+  Mina,
+  PrivateKey,
+  PublicKey,
+  shutdown,
+  Signature,
+} from 'snarkyjs';
 import fs from 'fs';
 
+/**
+ * A local Mina client that handles the private key, connections and such
+ */
 class MinaClient implements Client {
   private static instance: MinaClient;
   private serverPrivateKey: PrivateKey;
@@ -18,7 +29,7 @@ class MinaClient implements Client {
     await isReady;
     console.log('SnarkyJS loaded!\n');
 
-    if (config.Mina.useLocal) {
+    if (config.Mina.USE_LOCAL) {
       // use local blockchain
       const localBC = Mina.LocalBlockchain();
       Mina.setActiveInstance(localBC);
@@ -45,16 +56,16 @@ class MinaClient implements Client {
 
     // derive public key
     this.serverPublicKey = this.serverPrivateKey.toPublicKey();
+    console.log('Server using public key', this.serverPublicKey.toBase58());
+
     return;
   }
 
-  /// No async destroy required
   public async destroy(): Promise<void> {
     await shutdown();
     return;
   }
 
-  /// Check block number
   public async healthcheck(): Promise<boolean> {
     return true;
   }
@@ -70,6 +81,15 @@ class MinaClient implements Client {
 
   public getPublicKey(): PublicKey {
     return this.serverPublicKey;
+  }
+
+  public sign(fields: Field[]): Signature {
+    return Signature.create(this.serverPrivateKey, fields);
+    // let newRootSignature =
+    // [
+    //   newRoot,
+    //   Field(newRootNumber),
+    // ]);
   }
 }
 

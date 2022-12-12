@@ -1,6 +1,6 @@
-import express from 'express';
-import cors from 'cors';
-import fs from 'fs';
+import express from "express";
+import cors from "cors";
+import fs from "fs";
 
 import {
   isReady,
@@ -12,12 +12,12 @@ import {
   PublicKey,
   fetchAccount,
   Mina,
-} from 'snarkyjs';
+} from "snarkyjs";
 
 await isReady;
 
 console.log(
-  'CAUTION: This project is in development and not to be relied upon to guarantee storage in production environments.'
+  "CAUTION: This project is in development and not to be relied upon to guarantee storage in production environments."
 );
 
 const app = express();
@@ -37,12 +37,12 @@ if (useLocalBlockchain) {
   Mina.setActiveInstance(Local);
 } else {
   const Berkeley = Mina.BerkeleyQANet(
-    'https://proxy.berkeley.minaexplorer.com/graphql'
+    "https://proxy.berkeley.minaexplorer.com/graphql"
   );
   Mina.setActiveInstance(Berkeley);
 }
 
-const saveFile = 'database.json';
+const saveFile = "database.json";
 
 // ==============================================================================
 
@@ -60,11 +60,11 @@ let database: {
 
 let serverPrivateKey: PrivateKey;
 if (fs.existsSync(saveFile)) {
-  var fileData = fs.readFileSync(saveFile, 'utf8');
+  var fileData = fs.readFileSync(saveFile, "utf8");
   const data = JSON.parse(fileData);
   database = data.database;
   serverPrivateKey = PrivateKey.fromBase58(data.serverPrivateKey58);
-  console.log('found database');
+  console.log("found database");
 } else {
   serverPrivateKey = PrivateKey.random();
 
@@ -74,19 +74,19 @@ if (fs.existsSync(saveFile)) {
       database,
       serverPrivateKey58: serverPrivateKey.toBase58(),
     }),
-    'utf8'
+    "utf8"
   );
 }
 
 const serverPublicKey = serverPrivateKey.toPublicKey();
 
-console.log('Server using public key', serverPublicKey.toBase58());
+console.log("Server using public key", serverPublicKey.toBase58());
 
 // ==============================================================================
-
+// write database to file at some itnerval
 (async () => {
   for (;;) {
-    console.log('running cleanup');
+    console.log("running cleanup");
 
     for (let zkAppAddress in database) {
       let response = await fetchAccount({
@@ -97,7 +97,7 @@ console.log('Server using public key', serverPublicKey.toBase58());
         let accountRootNumber = accountRootNumberF.toBigInt();
         var root2data = database[zkAppAddress].root2data;
         database[zkAppAddress].root2data = {};
-        console.log('cleaning up', zkAppAddress);
+        console.log("cleaning up", zkAppAddress);
         for (let root in root2data) {
           if (root2data[root].rootNumber >= accountRootNumber) {
             database[zkAppAddress].root2data[root] = root2data[root];
@@ -112,7 +112,7 @@ console.log('Server using public key', serverPublicKey.toBase58());
         database,
         serverPrivateKey58: serverPrivateKey.toBase58(),
       }),
-      'utf8'
+      "utf8"
     );
 
     await new Promise((resolve) => setTimeout(resolve, 60000));
@@ -121,7 +121,7 @@ console.log('Server using public key', serverPublicKey.toBase58());
 
 // ==============================================================================
 
-app.post('/data', (req, res) => {
+app.post("/data", (req, res) => {
   const height: number = req.body.height;
   const items: Array<[string, string[]]> = req.body.items;
   const zkAppAddress58: string = req.body.zkAppAddress;
@@ -147,15 +147,15 @@ app.post('/data', (req, res) => {
     res
       .status(400)
       .send(
-        'height is too large. A max height of ' +
+        "height is too large. A max height of " +
           maxHeight +
-          ' is supported for this implementation'
+          " is supported for this implementation"
       );
     return;
   }
 
   if (items.length > 2 ** (height - 1)) {
-    res.status(400).send('too many items for height');
+    res.status(400).send("too many items for height");
     return;
   }
 
@@ -168,14 +168,14 @@ app.post('/data', (req, res) => {
   }
 
   if (database[zkAppAddress58].height != height) {
-    res.status(400).send('wrong height');
+    res.status(400).send("wrong height");
     return;
   }
 
   const newRoot = tree.getRoot();
   const newRootNumber = Field(database[zkAppAddress58].nextNumber);
 
-  database[zkAppAddress58].nextNumber += 1;
+  database[zkAppAddress58].nextNumber++;
   database[zkAppAddress58].root2data[newRoot.toString()] = {
     rootNumber: Number(newRootNumber.toBigInt()),
     items,
@@ -187,7 +187,7 @@ app.post('/data', (req, res) => {
       database,
       serverPrivateKey58: serverPrivateKey.toBase58(),
     }),
-    'utf8'
+    "utf8"
   );
 
   let newRootSignature = Signature.create(serverPrivateKey, [
@@ -195,7 +195,7 @@ app.post('/data', (req, res) => {
     newRootNumber,
   ]);
 
-  console.log('storing', zkAppAddress58, newRoot.toString());
+  console.log("storing", zkAppAddress58, newRoot.toString());
 
   res.json({
     result: [
@@ -207,23 +207,23 @@ app.post('/data', (req, res) => {
 
 // ==============================================================================
 
-app.get('/data', (req, res) => {
+app.get("/data", (req, res) => {
   const zkAppAddress58 = req.query.zkAppAddress;
   const root = req.query.root;
 
-  if (typeof zkAppAddress58 == 'string' && typeof root == 'string') {
-    console.log('getting', zkAppAddress58, root);
+  if (typeof zkAppAddress58 == "string" && typeof root == "string") {
+    console.log("getting", zkAppAddress58, root);
     res.json({
       items: database[zkAppAddress58].root2data[root].items,
     });
   } else {
-    res.status(400).send('bad query parameters');
+    res.status(400).send("bad query parameters");
   }
 });
 
 // ==============================================================================
 
-app.get('/publicKey', (req, res) => {
+app.get("/publicKey", (req, res) => {
   res.json({
     serverPublicKey58: serverPublicKey.toBase58(),
   });

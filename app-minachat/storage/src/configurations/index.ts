@@ -1,15 +1,17 @@
-type envType = 'dev' | 'test';
-
 /**
  * General configurations, such as environment and server details.
  */
 const config = {
-  Environment: (process.env.NODE_ENV as envType) || 'dev',
+  Environment: 'dev',
   Server: {
-    Port: Number(process.env.PORT) || 3001,
+    Port: 3001,
   },
   Mina: {
-    useLocal: true,
+    USE_LOCAL: true,
+  },
+  Storage: {
+    MAX_HEIGHT: 256,
+    SAVE_FILE: 'database.json',
   },
 };
 

@@ -14,6 +14,8 @@
   "main": "build/src/index.js",
   "types": "build/src/index.d.ts",
   "scripts": {
+    "start": "node ./build/src/main.js",
+    "prestart": "npm run build",
     "build": "tsc -p tsconfig.json",
     "buildw": "tsc -p tsconfig.json --watch",
     "coverage": "node --experimental-vm-modules --experimental-wasm-modules --experimental-wasm-threads node_modules/jest/bin/jest.js --coverage",
@@ -34,20 +36,17 @@
     "@types/jest": "^27.0.3",
     "@typescript-eslint/eslint-plugin": "^5.5.0",
     "@typescript-eslint/parser": "^5.5.0",
+    "axios": "^1.2.1",
     "eslint": "^8.7.0",
     "eslint-plugin-snarkyjs": "^0.1.0",
     "jest": "^27.3.1",
     "lint-staged": "^11.0.1",
     "prettier": "^2.3.2",
+    "snarkyjs": "^0.7.3",
     "ts-jest": "^27.0.7",
     "typescript": "^4.7.2",
     "xmlhttprequest-ts": "^1.0.1"
   },
-  "peerDependencies": {
-    "snarkyjs": "^0.7.3"
-  },
-  "dependencies": {
-    "axios": "^1.2.1",
-    "snarkyjs": "^0.7.3"
-  }
+  "peerDependencies": {},
+  "dependencies": {}
 }

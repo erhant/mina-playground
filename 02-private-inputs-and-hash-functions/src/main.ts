@@ -1,5 +1,5 @@
 import { IncrementSecret } from './IncrementSecret.js';
-import { isReady, shutdown, Field, Mina } from 'snarkyjs';
+import { isReady, shutdown, Field, Mina, PrivateKey } from 'snarkyjs';
 
 async function main() {
   const owner = await setup();
@@ -26,7 +26,7 @@ async function main() {
  * Sets up Mina local blockchain.
  * @returns fee payer account
  */
-async function setup() {
+async function setup(): Promise<PrivateKey> {
   console.log('Loading SnarkyJS...');
   await isReady;
   console.log('SnarkyJS loaded!\n');

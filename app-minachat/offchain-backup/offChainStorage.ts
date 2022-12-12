@@ -7,7 +7,7 @@ import {
   Signature,
   PublicKey,
   Circuit,
-} from 'snarkyjs';
+} from "snarkyjs";
 
 export class MerkleWitness4 extends MerkleWitness(4) {}
 export class MerkleWitness8 extends MerkleWitness(8) {}
@@ -22,7 +22,7 @@ export class MerkleWitness256 extends MerkleWitness(256) {}
 
 const printCaution = () =>
   console.log(
-    'CAUTION: This project is in development and not to be relied upon to guarantee storage in production environments.'
+    "CAUTION: This project is in development and not to be relied upon to guarantee storage in production environments."
   );
 
 export type Update = {
@@ -89,11 +89,11 @@ export const get = async (
   }
 
   var params =
-    'zkAppAddress=' + zkAppAddress.toBase58() + '&root=' + root.toString();
+    "zkAppAddress=" + zkAppAddress.toBase58() + "&root=" + root.toString();
 
   const response = await makeRequest(
-    'GET',
-    serverAddress + '/data?' + params,
+    "GET",
+    serverAddress + "/data?" + params,
     null,
     UserXMLHttpRequest
   );
@@ -130,8 +130,8 @@ export const requestStore = async (
   }
 
   const response = await makeRequest(
-    'POST',
-    serverAddress + '/data',
+    "POST",
+    serverAddress + "/data",
     JSON.stringify({
       zkAppAddress: zkAppAddress.toBase58(),
       items,
@@ -159,8 +159,8 @@ export const getPublicKey = async (
   UserXMLHttpRequest: typeof XMLHttpRequest | null = null
 ) => {
   const response = await makeRequest(
-    'GET',
-    serverAddress + '/publicKey',
+    "GET",
+    serverAddress + "/publicKey",
     null,
     UserXMLHttpRequest
   );
@@ -206,7 +206,7 @@ export function makeRequest(
       });
     };
     if (data != null) {
-      xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+      xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
     }
     xhr.send(data);
   });

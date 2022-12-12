@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { logger } from './logger';
+import { logger } from './logger.js';
 
 /**
  * A generic way to create a success response to an endpoint request.

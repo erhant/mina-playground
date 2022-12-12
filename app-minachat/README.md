@@ -15,7 +15,7 @@ There are 3 folders:
 Consider Alice and Bob, with secret and public key-pairs as $sk_a, pk_a$ and $sk_b, pk_b$ respectively. The first time they would like to chat, they create a random secret key to be used in a symmetric fashion. For this, they first put a common secret key $sk_{a,b}$ in a Merkle Tree:
 
 ```ts
-keysTree[pk_a ^ pk_b] = [
+keysTree[pk_a + pk_b] = [
   ENC(pk_a, sk_{a,b}), // encrypted for Alice
   ENC(pk_b, sk_{a,b})  // encrypted for Bob
 ]

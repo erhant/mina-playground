@@ -10,12 +10,16 @@ import {
   PublicKey,
   MerkleWitness,
   Signature,
+  Circuit,
+  Poseidon,
+  Bool,
 } from 'snarkyjs';
+import type { TreeUpdateType } from './types';
 
+const EMPTY_LEAF = Field(0);
 const KEY_TREE_HEIGHT = 32;
 class MerkleWitnessForKeys extends MerkleWitness(KEY_TREE_HEIGHT) {}
-const MSG_TREE_HEIGHT = 32;
-class MerkleWitnessForMsgs extends MerkleWitness(MSG_TREE_HEIGHT) {}
+export class OffchainStorageMerkleWitness extends MerkleWitness(KEY_TREE_HEIGHT) {}
 
 export class MinaChatContract extends SmartContract {
   // off-chain storage public key
@@ -23,9 +27,6 @@ export class MinaChatContract extends SmartContract {
   // merkle tree to store encrypted symmetric keys
   @state(Field) keysNumber = State<Field>();
   @state(Field) keysRoot = State<Field>();
-  // merkle tree to store messages
-  @state(Field) messagesNumber = State<Field>();
-  @state(Field) messagesRoot = State<Field>();
 
   deploy(args: DeployArgs) {
     super.deploy(args);
@@ -40,36 +41,70 @@ export class MinaChatContract extends SmartContract {
 
     this.keysNumber.set(Field(0));
     this.keysRoot.set(new MerkleTree(KEY_TREE_HEIGHT).getRoot());
-
-    this.messagesNumber.set(Field(0));
-    this.messagesRoot.set(new MerkleTree(MSG_TREE_HEIGHT).getRoot());
   }
 
-  @method initializeKey(
-    senderPublicKey: PublicKey,
-    recipientPublicKey: PublicKey,
-    signature: Signature,
-    encryptedKeyForSender: Buffer,
-    encryptedKeyForRecipient: Buffer,
-    witness: MerkleWitnessForKeys,
+  @method update(
+    leafIsEmpty: Bool,
+    oldValue: Field[],
+    newValue: Field[],
+    witness: OffchainStorageMerkleWitness,
     storedNewRootNumber: Field,
     storedNewRootSignature: Signature
   ) {
-    // assert initial states
-    const storedKeysRoot = this.keysRoot.get();
-    this.keysRoot.assertEquals(storedKeysRoot);
+    let keysRoot = this.keysRoot.get();
+    this.keysRoot.assertEquals(keysRoot);
 
-    const storedKeysNumber = this.keysNumber.get();
-    this.keysNumber.assertEquals(storedKeysNumber);
+    let keysNumber = this.keysNumber.get();
+    this.keysNumber.assertEquals(keysNumber);
 
-    const serverPublicKey = this.serverPublicKey.get();
+    let serverPublicKey = this.serverPublicKey.get();
     this.serverPublicKey.assertEquals(serverPublicKey);
 
-    // add the two keys to obtain an index
-    const indexKey = PublicKey.fromGroup(senderPublicKey.toGroup().add(recipientPublicKey.toGroup()));
-    // TODO: assert root update valid
-    // offchainStorage.assertKeyUpdateValid
+    // newLeaf can be a function of the existing leaf
+    // newLeaf[0].assertGt(leaf[0]);
 
-    // update local strage
+    const storedNewRoot = this.assertRootUpdates(
+      keysNumber,
+      keysRoot,
+      [
+        {
+          leaf: oldValue,
+          leafIsEmpty,
+          newLeaf: newValue,
+          newLeafIsEmpty: Bool(false),
+          leafWitness: witness,
+        },
+      ],
+      storedNewRootNumber,
+      storedNewRootSignature
+    );
+
+    this.keysRoot.set(storedNewRoot);
+    this.keysNumber.set(storedNewRootNumber);
+  }
+
+  assertRootUpdates(
+    localRootNumber: Field,
+    localRoot: Field,
+    updates: TreeUpdateType[],
+    serverNewRootNumber: Field,
+    serverNewRootSignature: Signature
+  ): Field {
+    for (let i = 0; i < updates.length; ++i) {
+      const { leaf, leafIsEmpty, newLeaf, newLeafIsEmpty, leafWitness } = updates[i];
+
+      // check the root is starting from the correct state
+      const currentLeafHash = Circuit.if(leafIsEmpty, EMPTY_LEAF, Poseidon.hash(leaf));
+      leafWitness.calculateRoot(currentLeafHash).assertEquals(localRoot);
+
+      // calculate the new root after setting the leaf
+      const newLeafHash = Circuit.if(newLeafIsEmpty, EMPTY_LEAF, Poseidon.hash(newLeaf));
+      localRoot = leafWitness.calculateRoot(newLeafHash);
+    }
+
+    // check the server is storing the stored new root
+    serverNewRootSignature.verify(this.serverPublicKey.get(), [localRoot, serverNewRootNumber]).assertTrue();
+    localRootNumber.assertLt(serverNewRootNumber);
+    return localRoot;
   }
 }

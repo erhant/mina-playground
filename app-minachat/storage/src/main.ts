@@ -1,15 +1,12 @@
-import dotenv from 'dotenv';
-dotenv.config({ path: `${__dirname}/../.env` });
-
 import express from 'express';
-import routerRoot from './routes/root.route';
-import config from './configurations';
+import routerRoot from './routes/root.route.js';
+import config from './configurations/index.js';
 
 // setup api clients
-import { logger } from './utilities/logger';
+import { logger } from './utilities/logger.js';
 import { Server } from 'http';
 import cors from 'cors';
-import { destroyClients, setupClients } from './clients';
+import { destroyClients, setupClients } from './clients/index.js';
 
 /**
  * Prepare the Express HTTP server
@@ -56,6 +53,7 @@ export async function killServer(server: Server, exitProcess = false) {
   logger.log('\n\nKilling server.');
 
   await destroyClients();
+  logger.log('Clients killed.');
 
   server.close((err) => {
     if (err) {

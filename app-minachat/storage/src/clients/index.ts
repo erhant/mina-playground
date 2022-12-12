@@ -1,10 +1,12 @@
-import { minaClient } from './mina';
+import { minaClient } from './mina.js';
+import { storageClient } from './storage.js';
 
 /**
  * Calls destroy of each client singleton.
  */
 export async function destroyClients(): Promise<void> {
   await minaClient().destroy();
+  await storageClient().destroy();
 }
 
 /**
@@ -14,8 +16,11 @@ export async function destroyClients(): Promise<void> {
 export async function setupClients(): Promise<boolean> {
   // setups
   await minaClient().setup();
+  await storageClient().setup();
   // healthcheck
-  return await minaClient().healthcheck();
+  return (
+    (await minaClient().healthcheck()) && (await storageClient().healthcheck())
+  );
 }
 
 export abstract class Client {
