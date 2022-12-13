@@ -1,6 +1,6 @@
-import axios from 'axios';
-import type { AxiosInstance } from 'axios';
-import { Field, MerkleTree, PublicKey, Signature } from 'snarkyjs';
+import axios from "axios";
+import type { AxiosInstance } from "axios";
+import { Field, MerkleTree, PublicKey, Signature } from "snarkyjs";
 
 export class OffchainStorageAPI {
   private axios: AxiosInstance;
@@ -20,7 +20,7 @@ export class OffchainStorageAPI {
 
   async pingServer(): Promise<boolean> {
     try {
-      const res = await this.axios.get('/getPublicKey/');
+      const res = await this.axios.get("/getPublicKey/");
       return res.status == 200;
     } catch (err) {
       return false;
@@ -32,7 +32,7 @@ export class OffchainStorageAPI {
    * @returns public key of the off-chain storage
    */
   async getServerPublicKey(): Promise<PublicKey> {
-    const res = await this.axios.get('/getPublicKey/');
+    const res = await this.axios.get("/getPublicKey/");
     return PublicKey.fromBase58(res.data.data.publicKey);
   }
 
@@ -76,7 +76,7 @@ export class OffchainStorageAPI {
     }
 
     // make request
-    const res = await this.axios.post('/storage/setItems', {
+    const res = await this.axios.post("/storage/setItems", {
       zkAppAddress58: this.zkAppAddress58,
       items,
       height,

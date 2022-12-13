@@ -4,15 +4,69 @@ import "./reactCOIServiceWorker";
 
 import ZkappWorkerClient from "./zkappWorkerClient";
 
-import { PublicKey, Field } from "snarkyjs";
+import { PublicKey, Field, PrivateKey, Bool, MerkleTree, Poseidon } from "snarkyjs";
 import Head from "next/head";
 import SetupInfo from "../components/SetupInfo";
 import AccountDoesNotExist from "../components/AccountDoesNotExist";
 import MainDisplay from "../components/MainDisplay";
+import { OffchainStorageAPI } from "../api/storage";
+import { TextInput } from "@mantine/core";
+import constants from "../constants";
+import { MinaKeyShareContract, OffchainStorageMerkleWitness } from "../../contracts/src/MinaKeyShareContract";
+import { encryptSecret, publicKeysToIndex } from "../utils";
 
-const TX_FEE = 0.1;
-const ZKAPP_ADDRESS = "B62qph2VodgSo5NKn9gZta5BHNxppgZMDUihf1g7mXreL4uPJFXDGDA";
-// see: https://berkeley.minaexplorer.com/wallet/B62qph2VodgSo5NKn9gZta5BHNxppgZMDUihf1g7mXreL4uPJFXDGDA
+async function initializeKey(
+  senderSk: PrivateKey,
+  recipientPk: PublicKey,
+  contract: MinaKeyShareContract,
+  offchainStorage: OffchainStorageAPI
+) {
+  // for the sake of example, the sender sends to themselves
+  const senderPk = senderSk.toPublicKey();
+
+  // index is (senderPk + recipientPk).x.toFields()
+  const index = publicKeysToIndex(senderPk, recipientPk);
+  const randomFields = [Field.random(), Field.random(), Field.random()];
+  // console.log('\tSETTING:', randomFields.toString());
+  const encryptedRandomFields = encryptSecret(senderPk, recipientPk, randomFields);
+  // console.log(`SET ${index.toString()} --> ${newValue.toString()}`);
+  // current root
+  const root = contract.keysRoot.get();
+
+  // get off-chain stored tree
+  const idx2fields = await offchainStorage.getItems(constants.KEY_TREE_HEIGHT, root);
+
+  // generate local tree
+  const tree = new MerkleTree(constants.KEY_TREE_HEIGHT);
+  for (const [idx, fields] of idx2fields) {
+    tree.setLeaf(idx, Poseidon.hash(fields));
+  }
+
+  // check current value at index
+  const leafIsEmpty = Bool(!idx2fields.has(index));
+  const oldValue: Field[] = leafIsEmpty.toBoolean() ? [Field(0)] : idx2fields.get(index)!;
+
+  // make a witness on the current tree
+  const witness = tree.getWitness(index);
+  const circuitWitness = new OffchainStorageMerkleWitness(witness);
+
+  // update tree & get new root
+  tree.setLeaf(index, Poseidon.hash(encryptedRandomFields));
+  // const newRoot = tree.getRoot(); // what to do with this guy?
+  idx2fields.set(index, encryptedRandomFields);
+
+  // store off-chain
+  const [newRootNumber, newRootSignature] = await offchainStorage.setItems(constants.KEY_TREE_HEIGHT, idx2fields);
+
+  return {
+    leafIsEmpty,
+    oldValueHash: Poseidon.hash(oldValue),
+    newValueHash: Poseidon.hash(encryptedRandomFields),
+    circuitWitness,
+    newRootNumber,
+    newRootSignature,
+  };
+}
 
 export default function App() {
   let [state, setState] = useState({
@@ -20,11 +74,14 @@ export default function App() {
     hasWallet: null as null | boolean,
     hasBeenSetup: false,
     accountExists: false,
-    currentNum: null as null | Field,
+    currentRoot: null as null | Field,
     publicKey: null as null | PublicKey,
     zkappPublicKey: null as null | PublicKey,
     creatingTransaction: false,
+    offchainStorage: null as null | OffchainStorageAPI,
   });
+  // some public key to share key with
+  let [peerPublicKey, setPeerPublicKey] = useState("B62qk1gXnUqtzjw9Ygr6DGGuVzTUaqsRgRSHGyyChpdoQeb8sRyCkWB");
 
   // setup snarkyjs, mina connection, and the blockchain
   useEffect(() => {
@@ -65,14 +122,14 @@ export default function App() {
       console.log("zkApp compiled");
 
       // initialize zkApp with the compiled file at the given address
-      const zkappPublicKey = PublicKey.fromBase58(ZKAPP_ADDRESS);
+      const zkappPublicKey = PublicKey.fromBase58(constants.ZKAPP_ADDRESS);
       await zkappWorkerClient.initZkappInstance(zkappPublicKey);
 
       // fetch initial contract state
       console.log("getting zkApp state...");
       await zkappWorkerClient.fetchAccount({ publicKey: zkappPublicKey });
-      const currentNum = await zkappWorkerClient.getNum();
-      console.log("current state:", currentNum.toString());
+      const currentRoot = await zkappWorkerClient.getRoot();
+      console.log("current state:", currentRoot.toString());
 
       setState((state) => ({
         ...state,
@@ -82,7 +139,8 @@ export default function App() {
         publicKey,
         zkappPublicKey,
         accountExists,
-        currentNum,
+        currentRoot,
+        offchainStorage: new OffchainStorageAPI(constants.STORAGE_SERVER_ADDR, zkappPublicKey),
       }));
     })();
   }, [state.hasBeenSetup]);
@@ -113,7 +171,7 @@ export default function App() {
 
   // handle send transaction
   const onSendTransaction = async () => {
-    if (!state.zkappWorkerClient) return;
+    if (!state.zkappWorkerClient || peerPublicKey == "") return;
 
     // update UI to indicate transaction
     setState({ ...state, creatingTransaction: true });
@@ -123,6 +181,7 @@ export default function App() {
     await state.zkappWorkerClient.fetchAccount({
       publicKey: state.publicKey!,
     });
+
     await state.zkappWorkerClient.createUpdateTransaction();
     console.log("creating proof...");
     await state.zkappWorkerClient.proveUpdateTransaction();
@@ -134,7 +193,7 @@ export default function App() {
     const { hash } = await (window as any).mina.sendTransaction({
       transaction: transactionJSON,
       feePayer: {
-        fee: TX_FEE, // pay a fixed fee
+        fee: constants.TX_FEE_DECIMAL, // pay a fixed fee
         memo: "",
       },
     });
@@ -145,22 +204,22 @@ export default function App() {
   };
 
   // handle refresh state
-  const onRefreshCurrentNum = async () => {
+  const onRefreshCurrentRoot = async () => {
     console.log("getting zkApp state...");
     await state.zkappWorkerClient!.fetchAccount({
       publicKey: state.zkappPublicKey!,
     });
-    const currentNum = await state.zkappWorkerClient!.getNum();
-    console.log("current state:", currentNum.toString());
+    const currentRoot = await state.zkappWorkerClient!.getRoot();
+    console.log("current root:", currentRoot.toString());
 
-    setState({ ...state, currentNum });
+    setState({ ...state, currentRoot });
   };
 
   return (
     <>
       <Head>
-        <title>Mina - Tutorial 4</title>
-        <meta name="description" content="UI of the Mina Protocol Tutorial Series: 4" />
+        <title>Mina Key-Share</title>
+        <meta name="description" content="A key-sharing app with Mina" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
@@ -175,9 +234,14 @@ export default function App() {
           accountExists={state.accountExists}
           hasBeenSetup={state.hasBeenSetup}
           onSendTransaction={onSendTransaction}
-          onRefreshCurrentNum={onRefreshCurrentNum}
-          currentNum={state.currentNum}
+          onRefreshCurrentRoot={onRefreshCurrentRoot}
+          currentRoot={state.currentRoot}
           creatingTransaction={state.creatingTransaction}
+        />
+        <TextInput
+          label="Public Key (base58)"
+          value={peerPublicKey}
+          onChange={(event) => setPeerPublicKey(event.currentTarget.value)}
         />
       </main>
     </>

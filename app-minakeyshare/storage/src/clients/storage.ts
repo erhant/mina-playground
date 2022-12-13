@@ -68,7 +68,7 @@ class StorageClient implements Client {
     // initialize database for this zkApp if it does not exist yet
     if (!(zkAppAddress58 in this.database)) {
       this.database[zkAppAddress58] = {
-        nextNumber: 1,
+        nextNumber: 1, // root number should start with 1
         height: tree.height,
         root2data: {},
       };
@@ -77,7 +77,7 @@ class StorageClient implements Client {
     // update tree
     const newRoot = tree.getRoot(); // generate the new root
     const newRootNumber = this.database[zkAppAddress58].nextNumber;
-    this.database[zkAppAddress58].nextNumber += 1; // increment number
+    this.database[zkAppAddress58].nextNumber += 1; // increment root number
     this.database[zkAppAddress58].root2data[newRoot.toString()] = {
       rootNumber: newRootNumber,
       items,

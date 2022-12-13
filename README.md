@@ -14,8 +14,8 @@ This repository has the code I have written as I follow through the tutorials at
 4. [Building a zkApp UI in the Browser with React (NextJS)](https://docs.minaprotocol.com/zkapps/tutorials/zkapp-ui-with-react). See my submission [here](https://github.com/erhant/mina-sample-zkapp-ui).
 5. [Common Types and Functions](https://docs.minaprotocol.com/zkapps/tutorials/common-types-and-functions)
 6. [Off-Chain Storage](https://docs.minaprotocol.com/zkapps/tutorials/offchain-storage)
-7. [Oracles TODO](https://docs.minaprotocol.com/zkapps/tutorials/oracle)
-8. [Custom Tokens TODO](https://docs.minaprotocol.com/zkapps/tutorials/custom-tokens)
+7. [Oracles **(TODO)**](https://docs.minaprotocol.com/zkapps/tutorials/oracle)
+8. [Custom Tokens **(TODO)**](https://docs.minaprotocol.com/zkapps/tutorials/custom-tokens)
 
 In all examples, I have done the following:
 
@@ -36,4 +36,4 @@ Some tutorials require further detail:
 
 ## Custom Applications
 
-I also have an example app: `offchain-chatting`.
+- [`MinaKeyShare`](./app-minakeyshare/) is a symmetric key-sharing application among Mina accounts. It uses an off-chain storage, implemented within.

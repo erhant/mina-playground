@@ -12,7 +12,6 @@ import {
   Signature,
   Circuit,
   Bool,
-  Poseidon,
 } from 'snarkyjs';
 import type { TreeUpdateType } from './types';
 import constants from './constants/index.js';

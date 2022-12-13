@@ -23,9 +23,9 @@ class MinaClient implements Client {
 
   /// No async setup required
   public async setup(): Promise<void> {
-    console.time('Loading SnarkyJS:');
+    console.time('Loading SnarkyJS');
     await isReady;
-    console.timeEnd('Loading SnarkyJS:');
+    console.timeEnd('Loading SnarkyJS');
 
     if (config.Mina.USE_LOCAL) {
       // use local blockchain

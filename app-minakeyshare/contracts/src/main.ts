@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { MinaKeyShareContract, OffchainStorageMerkleWitness } from './MineKeyShareContract.js';
+import { MinaKeyShareContract, OffchainStorageMerkleWitness } from './MinaKeyShareContract.js';
 import {
   Mina,
   isReady,
@@ -17,27 +17,31 @@ import { OffchainStorageAPI } from './api/storage.js';
 import constants from './constants/index.js';
 import { decryptSecret, encryptSecret, equalFields, publicKeysToIndex } from './utils/index.js';
 
-async function main() {
-  const owner = await setup();
-
+async function main(owner: PrivateKey) {
   // prepare zkapp keys
-  const zkappPrivateKey = constants.USE_LOCAL ? PrivateKey.random() : owner;
+  const zkappPrivateKey = PrivateKey.fromBase58('EKEdrzLT5eRp5x8a1aGDQJy5aYM1g4sHuPPvTJpTTsCrycNi9gHj'); // constants.USE_LOCAL ? PrivateKey.random() : owner;
   const zkappPublicKey = zkappPrivateKey.toPublicKey();
   console.log('zkApp Private Key:', zkappPrivateKey.toBase58());
   console.log('zkApp Public Key:', zkappPublicKey.toBase58());
 
   // prepare server key
   const offchainStorage = new OffchainStorageAPI(constants.STORAGE_SERVER_ADDR, zkappPublicKey);
+  if (!(await offchainStorage.pingServer())) {
+    console.error('Server could not be pinged!');
+    return;
+  }
   const serverPublicKey = await offchainStorage.getServerPublicKey();
   console.log('Off-chain Server Public Key:', serverPublicKey.toBase58());
 
   // prepare contract
   const contract = await prepareContract(owner, zkappPrivateKey, zkappPublicKey, serverPublicKey);
 
-  // initialize keys
-  console.log('\nInitializing keys.');
+  // sender & receiver
   const senderSk: PrivateKey = owner; // you are the sender
   const recipientPk: PublicKey = PrivateKey.random().toPublicKey(); // random recipient
+
+  // initialize keys
+  console.log('\nInitializing keys.');
   const kInit = await initializeKey(senderSk, recipientPk, contract, zkappPrivateKey, offchainStorage);
 
   // get the keys
@@ -45,6 +49,13 @@ async function main() {
   const kGet = await getKey(senderSk, recipientPk, contract, offchainStorage);
 
   console.log('Key matching:', equalFields(kGet, kInit));
+
+  try {
+    console.log('\nTrying to initialize keys again.');
+    await initializeKey(senderSk, recipientPk, contract, zkappPrivateKey, offchainStorage);
+  } catch (err) {
+    console.log('Failed, as expected.');
+  }
 
   await finish();
 }
@@ -99,25 +110,20 @@ async function initializeKey(
   }
 
   // create transaction
-  let tx;
   console.time('Creating transaction');
-  try {
-    tx = await Mina.transaction({ feePayerKey: senderSk, fee: constants.TX_FEE }, () => {
-      contract.update(
-        leafIsEmpty,
-        Poseidon.hash(oldValue),
-        Poseidon.hash(encryptedRandomFields),
-        circuitWitness,
-        newRootNumber,
-        newRootSignature
-      );
-      // contract.sign(zkappPrivateKey);
-      contract.requireSignature();
-    });
-  } catch (err) {
-    console.log('ERROR!', err);
-    return [];
-  }
+  const tx = await Mina.transaction({ feePayerKey: senderSk, fee: constants.TX_FEE }, () => {
+    contract.update(
+      leafIsEmpty,
+      Poseidon.hash(oldValue),
+      Poseidon.hash(encryptedRandomFields),
+      circuitWitness,
+      newRootNumber,
+      newRootSignature
+    );
+    // contract.sign(zkappPrivateKey);
+    contract.requireSignature();
+  });
+
   console.timeEnd('Creating transaction');
 
   // create a proof for transaction
@@ -236,4 +242,7 @@ async function finish() {
   console.timeEnd(LABEL);
 }
 
-main().then(() => console.log('Done'));
+setup()
+  .then(main)
+  .then(finish)
+  .then(() => console.log('Done'));

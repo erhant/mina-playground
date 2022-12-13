@@ -1,7 +1,6 @@
 import { Container } from "@mantine/core";
 import type { FC, ReactNode } from "react";
-import Footer from "./footer";
-import Header from "./header";
+import Header from "./Header";
 import styles from "../styles/layout.module.scss";
 
 const Layout: FC<{
@@ -11,8 +10,6 @@ const Layout: FC<{
     <div className={styles["layout"]}>
       <Header />
       <Container>{children}</Container>
-      <div style={{ flexGrow: 1 }} />
-      <Footer />
     </div>
   );
 };

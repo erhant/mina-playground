@@ -52,10 +52,10 @@ const functions = {
     return JSON.stringify(currentRootNumber.toJSON());
   },
   createUpdateTransaction: async (args: {}) => {
-    const transaction = await Mina.transaction(() => {
-      state.zkapp!.update(); // TODO
-    });
-    state.transaction = transaction;
+    // const transaction = await Mina.transaction(() => {
+    //   state.zkapp!.update(); // TODO
+    // });
+    // state.transaction = transaction;
   },
   proveUpdateTransaction: async (args: {}) => {
     await state.transaction!.prove();

@@ -5,17 +5,17 @@ const MainDisplay: FC<{
   accountExists: boolean;
   hasBeenSetup: boolean;
   creatingTransaction: boolean;
-  currentNum: Field | null;
+  currentRoot: Field | null;
   onSendTransaction: () => Promise<void>;
-  onRefreshCurrentNum: () => Promise<void>;
-}> = ({ accountExists, hasBeenSetup, onSendTransaction, onRefreshCurrentNum, creatingTransaction, currentNum }) => {
+  onRefreshCurrentRoot: () => Promise<void>;
+}> = ({ accountExists, hasBeenSetup, onSendTransaction, onRefreshCurrentRoot, creatingTransaction, currentRoot }) => {
   return accountExists && hasBeenSetup ? (
     <div>
       <button onClick={onSendTransaction} disabled={creatingTransaction}>
         Send Transaction
       </button>
-      <div> Current Number: {currentNum!.toString()} </div>
-      <button onClick={onRefreshCurrentNum}> Refresh State </button>
+      <div> Current Root: {currentRoot!.toString()} </div>
+      <button onClick={onRefreshCurrentRoot}> Refresh State </button>
     </div>
   ) : (
     <></>
