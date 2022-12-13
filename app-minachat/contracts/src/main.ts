@@ -12,9 +12,11 @@ import {
   Field,
   MerkleTree,
   Poseidon,
+  Encryption,
 } from 'snarkyjs';
 import { OffchainStorageAPI } from './api/storage.js';
 import constants from './constants/index.js';
+import { encryptSecret, publicKeysToIndex } from './utils/index.js';
 
 async function main() {
   const owner = await setup();
@@ -52,9 +54,10 @@ async function initializeKeys(
   const recipient = owner.toPublicKey();
 
   // index is (senderPk + recipientPk).x.toFields()
-  const indexKey = PublicKey.fromGroup(sender.toGroup().add(recipient.toGroup()));
-  const index = indexKey.x.toBigInt();
-  const newValue = Field.random(); // a random field element is private key for AES
+  const index = publicKeysToIndex(sender, recipient);
+  const randomField = Field.random(); // a random field element is private key for AES
+  const newValue = encryptSecret(sender, recipient, randomField);
+
   console.log('Setting:', index.toString(), 'to', newValue.toString());
 
   // current root
@@ -71,16 +74,16 @@ async function initializeKeys(
 
   // check current value at index
   const leafIsEmpty = Bool(!idx2fields.has(index));
-  const oldValue: Field = leafIsEmpty.toBoolean() ? Field(0) : idx2fields.get(index)![0];
+  const oldValue: Field[] = leafIsEmpty.toBoolean() ? [Field(0)] : idx2fields.get(index)!;
 
   // make a witness on the current tree
   const witness = tree.getWitness(index);
   const circuitWitness = new OffchainStorageMerkleWitness(witness);
 
   // update tree & get new root
-  tree.setLeaf(index, Poseidon.hash([newValue]));
+  tree.setLeaf(index, Poseidon.hash(newValue));
   const newRoot = tree.getRoot(); // what to do with this guy?
-  idx2fields.set(index, [newValue]);
+  idx2fields.set(index, newValue);
 
   // store off-chain
   const [newRootNumber, newRootSignature] = await offchainStorage.setItems(constants.KEY_TREE_HEIGHT, idx2fields);
@@ -95,7 +98,14 @@ async function initializeKeys(
   let tx;
   try {
     tx = await Mina.transaction({ feePayerKey: owner, fee: constants.TX_FEE }, () => {
-      contract.update(leafIsEmpty, oldValue, newValue, circuitWitness, newRootNumber, newRootSignature);
+      contract.update(
+        leafIsEmpty,
+        Poseidon.hash(oldValue),
+        Poseidon.hash(newValue),
+        circuitWitness,
+        newRootNumber,
+        newRootSignature
+      );
       contract.sign(zkappPrivateKey);
       // contract.requireSignature();
     });

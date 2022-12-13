@@ -10,9 +10,9 @@ export class MerkleWitness128 extends MerkleWitness(128) {}
 export class MerkleWitness256 extends MerkleWitness(256) {}
 
 export type TreeUpdateType = {
-  leaf: Field[];
+  leafHash: Field;
   leafIsEmpty: Bool;
-  newLeaf: Field[];
+  newLeafHash: Field;
   newLeafIsEmpty: Bool;
   leafWitness: MerkleWitness8;
 };

@@ -11,7 +11,6 @@ import {
   MerkleWitness,
   Signature,
   Circuit,
-  Poseidon,
   Bool,
 } from 'snarkyjs';
 import type { TreeUpdateType } from './types';
@@ -44,13 +43,12 @@ export class MinaChatContract extends SmartContract {
 
   @method update(
     leafIsEmpty: Bool,
-    oldValue: Field,
-    newValue: Field,
+    oldValueHash: Field,
+    newValueHash: Field,
     witness: OffchainStorageMerkleWitness,
     storedNewRootNumber: Field,
     storedNewRootSignature: Signature
   ) {
-    console.log('Asserting states...');
     let keysRoot = this.keysRoot.get();
     this.keysRoot.assertEquals(keysRoot);
 
@@ -62,15 +60,14 @@ export class MinaChatContract extends SmartContract {
 
     // newLeaf can be a function of the existing leaf
     // newLeaf[0].assertGt(leaf[0]);
-    console.log('Asserting root updates...');
     const storedNewRoot = this.assertRootUpdates(
       keysNumber,
       keysRoot,
       [
         {
-          leaf: [oldValue],
+          leafHash: oldValueHash,
           leafIsEmpty,
-          newLeaf: [newValue],
+          newLeafHash: newValueHash,
           newLeafIsEmpty: Bool(false),
           leafWitness: witness,
         },
@@ -79,10 +76,8 @@ export class MinaChatContract extends SmartContract {
       storedNewRootSignature
     );
 
-    console.log('Updating state...');
     this.keysRoot.set(storedNewRoot);
     this.keysNumber.set(storedNewRootNumber);
-    console.log('Done!');
   }
 
   assertRootUpdates(
@@ -94,21 +89,16 @@ export class MinaChatContract extends SmartContract {
   ): Field {
     const EMPTY_LEAF = Field(0);
     for (let i = 0; i < updates.length; ++i) {
-      const { leaf, leafIsEmpty, newLeaf, newLeafIsEmpty, leafWitness } = updates[i];
+      const { leafHash, leafIsEmpty, newLeafHash, newLeafIsEmpty, leafWitness } = updates[i];
 
       // check the root is starting from the correct state
-      console.log('Checking current leaf...');
-      const currentLeafHash = Circuit.if(leafIsEmpty, EMPTY_LEAF, Poseidon.hash(leaf));
-      leafWitness.calculateRoot(currentLeafHash).assertEquals(localRoot);
+      leafWitness.calculateRoot(Circuit.if(leafIsEmpty, EMPTY_LEAF, leafHash)).assertEquals(localRoot);
 
       // calculate the new root after setting the leaf
-      console.log('Checking new leaf...');
-      const newLeafHash = Circuit.if(newLeafIsEmpty, EMPTY_LEAF, Poseidon.hash(newLeaf));
-      localRoot = leafWitness.calculateRoot(newLeafHash);
+      localRoot = leafWitness.calculateRoot(Circuit.if(newLeafIsEmpty, EMPTY_LEAF, newLeafHash));
     }
 
     // check the server is storing the stored new root
-    console.log('Verifying signature...');
     serverNewRootSignature.verify(this.serverPublicKey.get(), [localRoot, serverNewRootNumber]).assertTrue();
     localRootNumber.assertLt(serverNewRootNumber);
     return localRoot;

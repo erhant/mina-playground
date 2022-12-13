@@ -23,9 +23,9 @@ class MinaClient implements Client {
 
   /// No async setup required
   public async setup(): Promise<void> {
-    console.log('Loading SnarkyJS...');
+    console.time('Loading SnarkyJS:');
     await isReady;
-    console.log('SnarkyJS loaded!\n');
+    console.timeEnd('Loading SnarkyJS:');
 
     if (config.Mina.USE_LOCAL) {
       // use local blockchain
@@ -33,7 +33,16 @@ class MinaClient implements Client {
       Mina.setActiveInstance(localBC);
 
       // get default account
-      this.serverPrivateKey = localBC.testAccounts[0].privateKey;
+      // this.serverPrivateKey = localBC.testAccounts[0].privateKey;
+
+      // read deployer from file (REMOVE LATER)
+      const deployerKeysFileContents = fs.readFileSync(
+        `keys/default.json`,
+        'utf8'
+      );
+      const deployerPrivateKeyBase58 = JSON.parse(deployerKeysFileContents)
+        .privateKey58 as string;
+      this.serverPrivateKey = PrivateKey.fromBase58(deployerPrivateKeyBase58);
     } else {
       // connect to Berkeley
       const Berkeley = Mina.Network(
@@ -42,13 +51,12 @@ class MinaClient implements Client {
       Mina.setActiveInstance(Berkeley);
 
       // read deployer from file
-      const deployAlias = process.argv[2];
       const deployerKeysFileContents = fs.readFileSync(
-        `keys/${deployAlias}.json`,
+        `keys/default.json`,
         'utf8'
       );
       const deployerPrivateKeyBase58 = JSON.parse(deployerKeysFileContents)
-        .privateKey as string;
+        .privateKey58 as string;
       this.serverPrivateKey = PrivateKey.fromBase58(deployerPrivateKeyBase58);
     }
 

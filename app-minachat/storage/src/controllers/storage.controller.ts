@@ -47,25 +47,12 @@ export async function setItems(request: Request, response: Response) {
 
   // create a local merkle tree
   const tree = new MerkleTree(height);
-
-  {
-    // map strings to bigint and fields
-    const fieldItems: Array<[bigint, Field[]]> = items.map(([idx, strs]) => [
-      BigInt(idx),
-      strs.map(Field.fromJSON),
-    ]);
-
-    // map bigint and fields to index and fields
-    const idx2fields = new Map<bigint, Field[]>();
-    fieldItems.forEach(([index, fields]) => {
-      idx2fields.set(index, fields);
-    });
-
-    // populate the tree
-    for (const [idx, fields] of idx2fields) {
-      tree.setLeaf(idx, Poseidon.hash(fields));
-    }
-  }
+  items.forEach((val) => {
+    const [idxStr, fieldStrs] = val;
+    const idx = BigInt(idxStr);
+    const fields = fieldStrs.map(Field.fromJSON);
+    tree.setLeaf(idx, Poseidon.hash(fields));
+  });
 
   // TODO: try catch for tree height mismatch
   const [newRoot, newRootNumber] = storageClient().setItems(
