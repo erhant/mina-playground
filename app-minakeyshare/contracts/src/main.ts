@@ -48,14 +48,14 @@ async function main(owner: PrivateKey) {
   console.log('\nGetting the key.');
   const kGet = await getKey(senderSk, recipientPk, contract, offchainStorage);
 
-  console.log('Key matching:', equalFields(kGet, kInit));
+  console.log('Keys are matching:', equalFields(kGet, kInit));
 
-  try {
-    console.log('\nTrying to initialize keys again.');
-    await initializeKey(senderSk, recipientPk, contract, zkappPrivateKey, offchainStorage);
-  } catch (err) {
-    console.log('Failed, as expected.');
-  }
+  // try {
+  //   console.log('\nTrying to initialize keys again.');
+  //   await initializeKey(senderSk, recipientPk, contract, zkappPrivateKey, offchainStorage);
+  // } catch (err) {
+  //   console.log('Failed, as expected.');
+  // }
 
   await finish();
 }
@@ -90,6 +90,10 @@ async function initializeKey(
 
   // check current value at index
   const leafIsEmpty = Bool(!idx2fields.has(index));
+  if (!leafIsEmpty.toBoolean()) {
+    console.log('Key already exists!');
+    return idx2fields.get(index)!;
+  }
   const oldValue: Field[] = leafIsEmpty.toBoolean() ? [Field(0)] : idx2fields.get(index)!;
 
   // make a witness on the current tree
@@ -218,6 +222,23 @@ async function prepareContract(
     });
     await tx.sign([zkappPrivateKey]).send();
   } else {
+    // deploy here if wanted
+    // if (true) {
+    //   console.log('Deploying!');
+    //   const tx = await Mina.transaction(
+    //     {
+    //       feePayerKey: owner,
+    //       fee: constants.TX_FEE,
+    //     },
+    //     () => {
+    //       AccountUpdate.fundNewAccount(owner); // funds the deployed zkapp account
+    //       contract.deploy({ zkappKey: zkappPrivateKey });
+    //       contract.initState(serverPublicKey);
+    //       contract.requireSignature();
+    //     }
+    //   );
+    //   await tx.sign([zkappPrivateKey]).send();
+    // }
     // retrieve the on-chain contract
     while (true) {
       let response = await fetchAccount({ publicKey: zkappPublicKey });

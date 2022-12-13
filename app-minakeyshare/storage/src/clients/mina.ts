@@ -1,9 +1,7 @@
-import config from '../configurations/index.js';
 import { Client } from './index.js';
 import {
   Field,
   isReady,
-  Mina,
   PrivateKey,
   PublicKey,
   shutdown,
@@ -27,38 +25,14 @@ class MinaClient implements Client {
     await isReady;
     console.timeEnd('Loading SnarkyJS');
 
-    if (config.Mina.USE_LOCAL) {
-      // use local blockchain
-      const localBC = Mina.LocalBlockchain();
-      Mina.setActiveInstance(localBC);
-
-      // get default account
-      // this.serverPrivateKey = localBC.testAccounts[0].privateKey;
-
-      // read deployer from file (REMOVE LATER)
-      const deployerKeysFileContents = fs.readFileSync(
-        `keys/default.json`,
-        'utf8'
-      );
-      const deployerPrivateKeyBase58 = JSON.parse(deployerKeysFileContents)
-        .privateKey as string;
-      this.serverPrivateKey = PrivateKey.fromBase58(deployerPrivateKeyBase58);
-    } else {
-      // connect to Berkeley
-      const Berkeley = Mina.Network(
-        'https://proxy.berkeley.minaexplorer.com/graphql'
-      );
-      Mina.setActiveInstance(Berkeley);
-
-      // read deployer from file
-      const deployerKeysFileContents = fs.readFileSync(
-        `keys/default.json`,
-        'utf8'
-      );
-      const deployerPrivateKeyBase58 = JSON.parse(deployerKeysFileContents)
-        .privateKey as string;
-      this.serverPrivateKey = PrivateKey.fromBase58(deployerPrivateKeyBase58);
-    }
+    // read deployer from file (REMOVE LATER)
+    const deployerKeysFileContents = fs.readFileSync(
+      `keys/default.json`,
+      'utf8'
+    );
+    const deployerPrivateKeyBase58 = JSON.parse(deployerKeysFileContents)
+      .privateKey as string;
+    this.serverPrivateKey = PrivateKey.fromBase58(deployerPrivateKeyBase58);
 
     // derive public key
     this.serverPublicKey = this.serverPrivateKey.toPublicKey();
@@ -68,8 +42,9 @@ class MinaClient implements Client {
   }
 
   public async destroy(): Promise<void> {
+    console.time('Shutting down SnarkyJS');
     await shutdown();
-    return;
+    console.timeEnd('Shutting down SnarkyJS');
   }
 
   public async healthcheck(): Promise<boolean> {

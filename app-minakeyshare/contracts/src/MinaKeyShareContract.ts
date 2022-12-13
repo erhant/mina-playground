@@ -32,6 +32,8 @@ export class MinaKeyShareContract extends SmartContract {
       ...Permissions.default(),
       editState: Permissions.proofOrSignature(),
     });
+    // how to give this via `zk deploy` ????
+    // this.initState(PublicKey.fromBase58('B62qr1YKkB94KmzaGZvC1ocz8sLmMGzH81rvZFUEesAPypeq8hzZvns'));
   }
 
   @method initState(serverPublicKey: PublicKey) {

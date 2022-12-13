@@ -2,13 +2,17 @@
 
 This is a key-sharing application that uses an off-chain storage.
 
+Dpeloyed: <https://berkeley.minaexplorer.com/wallet/B62qrXqziqCYBpL4EihqSKeoVfPrT7zSdBmVoemNaHXAgBNTxHLfKdf>
+
 ## Usage
 
 There are 3 folders:
 
 - [`contracts`](./contracts/) folder has the main chatting smart contract.
-- [`ui`](./ui/) has the NextJS frontend. **WORK IN PROGRESS**.
+- [`ui`](./ui/) has the NextJS frontend. **WORK IN PROGRESS**. Work is halted on this part until I can find a way to fetch private key from account on the frontend.
 - [`storage`](./storage/) has the off-chain storage backend implementation.
+
+Write `npm start` to start each of them in their active directory.
 
 ## Methodology
 
@@ -101,3 +105,5 @@ export function decryptSecret(
   return pt;
 }
 ```
+
+This way, both parties can parse this ciphertext the same way, and see the original plaintext to be used as a symmetric key.
