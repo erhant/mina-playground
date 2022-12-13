@@ -9,7 +9,7 @@ const Header: FC = () => {
       <Container>
         <Group>
           <Text sx={{ fontSize: "1.5em", fontWeight: 800 }} inline>
-            <Link href="/">MinaChat</Link>
+            <Link href="/">MinaKeyShare</Link>
           </Text>
 
           {/* pushes the succeeding contents to the right */}

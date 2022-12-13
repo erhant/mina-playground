@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { MinaChatContract, OffchainStorageMerkleWitness } from './MinaChatContract.js';
+import { MinaKeyShareContract, OffchainStorageMerkleWitness } from './MineKeyShareContract.js';
 import {
   Mina,
   isReady,
@@ -15,7 +15,7 @@ import {
 } from 'snarkyjs';
 import { OffchainStorageAPI } from './api/storage.js';
 import constants from './constants/index.js';
-import { decryptSecret, encryptSecret, publicKeysToIndex } from './utils/index.js';
+import { decryptSecret, encryptSecret, equalFields, publicKeysToIndex } from './utils/index.js';
 
 async function main() {
   const owner = await setup();
@@ -38,11 +38,13 @@ async function main() {
   console.log('\nInitializing keys.');
   const senderSk: PrivateKey = owner; // you are the sender
   const recipientPk: PublicKey = PrivateKey.random().toPublicKey(); // random recipient
-  await initializeKey(senderSk, recipientPk, contract, zkappPrivateKey, offchainStorage);
+  const kInit = await initializeKey(senderSk, recipientPk, contract, zkappPrivateKey, offchainStorage);
 
   // get the keys
   console.log('\nGetting the key.');
-  await getKeys(senderSk, recipientPk, contract, offchainStorage);
+  const kGet = await getKey(senderSk, recipientPk, contract, offchainStorage);
+
+  console.log('Key matching:', equalFields(kGet, kInit));
 
   await finish();
 }
@@ -50,19 +52,19 @@ async function main() {
 async function initializeKey(
   senderSk: PrivateKey,
   recipientPk: PublicKey,
-  contract: MinaChatContract,
+  contract: MinaKeyShareContract,
   zkappPrivateKey: PrivateKey,
   offchainStorage: OffchainStorageAPI
-) {
+): Promise<Field[]> {
   // for the sake of example, the sender sends to themselves
   const senderPk = senderSk.toPublicKey();
 
   // index is (senderPk + recipientPk).x.toFields()
   const index = publicKeysToIndex(senderPk, recipientPk);
-  const randomFields = [Field.random()];
-  console.log('\tSETTING:', randomFields.toString());
-  const newValue = encryptSecret(senderPk, recipientPk, randomFields);
-  console.log(`SET ${index.toString()} --> ${newValue.toString()}`);
+  const randomFields = [Field.random(), Field.random(), Field.random()];
+  // console.log('\tSETTING:', randomFields.toString());
+  const encryptedRandomFields = encryptSecret(senderPk, recipientPk, randomFields);
+  // console.log(`SET ${index.toString()} --> ${newValue.toString()}`);
   // current root
   const root = contract.keysRoot.get();
 
@@ -84,9 +86,9 @@ async function initializeKey(
   const circuitWitness = new OffchainStorageMerkleWitness(witness);
 
   // update tree & get new root
-  tree.setLeaf(index, Poseidon.hash(newValue));
+  tree.setLeaf(index, Poseidon.hash(encryptedRandomFields));
   // const newRoot = tree.getRoot(); // what to do with this guy?
-  idx2fields.set(index, newValue);
+  idx2fields.set(index, encryptedRandomFields);
 
   // store off-chain
   const [newRootNumber, newRootSignature] = await offchainStorage.setItems(constants.KEY_TREE_HEIGHT, idx2fields);
@@ -104,17 +106,17 @@ async function initializeKey(
       contract.update(
         leafIsEmpty,
         Poseidon.hash(oldValue),
-        Poseidon.hash(newValue),
+        Poseidon.hash(encryptedRandomFields),
         circuitWitness,
         newRootNumber,
         newRootSignature
       );
-      contract.sign(zkappPrivateKey);
-      // contract.requireSignature();
+      // contract.sign(zkappPrivateKey);
+      contract.requireSignature();
     });
   } catch (err) {
     console.log('ERROR!', err);
-    return;
+    return [];
   }
   console.timeEnd('Creating transaction');
 
@@ -127,16 +129,18 @@ async function initializeKey(
     console.timeEnd(LABEL);
   }
 
-  await tx.send();
+  await tx.sign([zkappPrivateKey]).send();
   // console.log('Hash:', res.hash());
+
+  return randomFields;
 }
 
-async function getKeys(
+async function getKey(
   senderSk: PrivateKey,
   recipientPk: PublicKey,
-  contract: MinaChatContract,
+  contract: MinaKeyShareContract,
   offchainStorage: OffchainStorageAPI
-) {
+): Promise<Field[]> {
   // for the sake of example, the sender sends to themselves
   const senderPk = senderSk.toPublicKey();
 
@@ -146,11 +150,12 @@ async function getKeys(
 
   const value = idx2fields.get(index);
   if (value === undefined) {
-    console.log('No key at this index.');
+    // console.log('No key at this index.');
+    return [];
   } else {
-    console.log(`GET ${index} --> ${value}`);
+    // console.log(`GET ${index} --> ${value}`);
     const f = decryptSecret(senderSk, recipientPk, value);
-    console.log('\tGOT:', f.toString());
+    return f;
   }
 }
 
@@ -187,15 +192,15 @@ async function prepareContract(
   zkappPrivateKey: PrivateKey,
   zkappPublicKey: PublicKey,
   serverPublicKey: PublicKey
-): Promise<MinaChatContract> {
+): Promise<MinaKeyShareContract> {
   // compile the contract if not local
   if (!constants.USE_LOCAL) {
     console.log('Compiling smart contract...');
-    await MinaChatContract.compile();
+    await MinaKeyShareContract.compile();
   }
 
   // instantiate
-  const contract = new MinaChatContract(zkappPublicKey);
+  const contract = new MinaKeyShareContract(zkappPublicKey);
 
   if (constants.USE_LOCAL) {
     // deploy to local network

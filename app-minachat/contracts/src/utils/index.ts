@@ -40,7 +40,8 @@ export function encryptSecret(yourPk: PublicKey, peerPk: PublicKey, f: Field[]):
 }
 
 /**
- *
+ * Decrypts a ciphertext encrypted with some public key.
+ * @see {encryptSecret} for more details
  * @param yourSk your private key
  * @param peerPk peer public key
  * @param s [c1.x, c1.y, c2.x, c2.y, c1.len, ...c1, ...c2] as a single array.
@@ -63,4 +64,18 @@ export function decryptSecret(yourSk: PrivateKey, peerPk: PublicKey, s: Field[])
   );
 
   return pt;
+}
+
+/**
+ * Compares two arrays of fields
+ * @param a array of fields
+ * @param b array of fields
+ * @returns true if they are equal
+ */
+export function equalFields(a: Field[], b: Field[]) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; ++i) {
+    if (!a[i].equals(b[i]).toBoolean()) return false;
+  }
+  return true;
 }

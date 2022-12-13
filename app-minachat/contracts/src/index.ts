@@ -1,1 +1,1 @@
-export { MinaChatContract } from './MinaChatContract.js';
+export { MinaKeyShareContract } from './MinaKeyShareContract.js';

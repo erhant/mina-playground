@@ -20,7 +20,7 @@ import constants from './constants/index.js';
 // class MerkleWitnessForKeys extends MerkleWitness(KEY_TREE_HEIGHT) {}
 export class OffchainStorageMerkleWitness extends MerkleWitness(constants.KEY_TREE_HEIGHT) {}
 
-export class MinaChatContract extends SmartContract {
+export class MinaKeyShareContract extends SmartContract {
   // off-chain storage public key
   @state(PublicKey) serverPublicKey = State<PublicKey>();
   // merkle tree to store encrypted symmetric keys
@@ -59,7 +59,8 @@ export class MinaChatContract extends SmartContract {
     let serverPublicKey = this.serverPublicKey.get();
     this.serverPublicKey.assertEquals(serverPublicKey);
 
-    // TODO: add constraints here on the shared key
+    // do not add a new key if it exists already
+    leafIsEmpty.assertTrue();
 
     const storedNewRoot = this.assertRootUpdates(
       keysNumber,

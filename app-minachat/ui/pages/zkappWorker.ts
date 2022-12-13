@@ -1,37 +1,39 @@
 import { Mina, isReady, PublicKey, PrivateKey, Field, fetchAccount } from "snarkyjs";
-
+import type { MinaKeyShareContract } from "../../contracts/src/MinaKeyShareContract";
 type Transaction = Awaited<ReturnType<typeof Mina.transaction>>;
 
-// ---------------------------------------------------------------------------------------
-
-import type { Add } from "../../contracts/src/Add";
-
-const state = {
-  Add: null as null | typeof Add,
-  zkapp: null as null | Add,
-  transaction: null as null | Transaction,
+export type WorkerFunctions = keyof typeof functions;
+export type ZkappWorkerRequest = {
+  id: number;
+  fn: WorkerFunctions;
+  args: any;
+};
+export type ZkappWorkerReponse = {
+  id: number;
+  data: any;
 };
 
-// ---------------------------------------------------------------------------------------
+const state = {
+  MinaKeyShareContract: null as null | typeof MinaKeyShareContract,
+  zkapp: null as null | MinaKeyShareContract,
+  transaction: null as null | Transaction,
+};
 
 const functions = {
   loadSnarkyJS: async (args: {}) => {
     await isReady;
   },
   setActiveInstanceToBerkeley: async (args: {}) => {
-    // changed from `Mina.BerkeleyQANet` to `Mina.Network`
     const Berkeley = Mina.Network("https://proxy.berkeley.minaexplorer.com/graphql");
     Mina.setActiveInstance(Berkeley);
   },
   loadContract: async (args: {}) => {
-    const { Add } = await import("../../contracts/build/src/Add.js");
-    state.Add = Add;
+    const { MinaKeyShareContract } = await import("../../contracts/build/src/MinaKeyShareContract.js");
+    state.MinaKeyShareContract = MinaKeyShareContract;
   },
   compileContract: async (args: {}) => {
-    const res = await state.Add!.compile();
-    console.log("VK:", res.verificationKey.hash);
-    console.log("Expected:", "4851262813207464979627140462974063613924095144061541973375101057533539242846");
-    // should be: 4851262813207464979627140462974063613924095144061541973375101057533539242846
+    const res = await state.MinaKeyShareContract!.compile();
+    console.log("Verification key hash:", res.verificationKey.hash);
   },
   fetchAccount: async (args: { publicKey58: string }) => {
     const publicKey = PublicKey.fromBase58(args.publicKey58);
@@ -39,15 +41,19 @@ const functions = {
   },
   initZkappInstance: async (args: { publicKey58: string }) => {
     const publicKey = PublicKey.fromBase58(args.publicKey58);
-    state.zkapp = new state.Add!(publicKey);
+    state.zkapp = new state.MinaKeyShareContract!(publicKey);
   },
-  getNum: async (args: {}) => {
-    const currentNum = await state.zkapp!.num.get();
-    return JSON.stringify(currentNum.toJSON());
+  getRoot: async (args: {}) => {
+    const currentRoot = await state.zkapp!.keysRoot.get();
+    return JSON.stringify(currentRoot.toJSON());
+  },
+  getRootNumber: async (args: {}) => {
+    const currentRootNumber = await state.zkapp!.keysNumber.get();
+    return JSON.stringify(currentRootNumber.toJSON());
   },
   createUpdateTransaction: async (args: {}) => {
     const transaction = await Mina.transaction(() => {
-      state.zkapp!.update();
+      state.zkapp!.update(); // TODO
     });
     state.transaction = transaction;
   },
@@ -59,20 +65,6 @@ const functions = {
   },
 };
 
-// ---------------------------------------------------------------------------------------
-
-export type WorkerFunctions = keyof typeof functions;
-
-export type ZkappWorkerRequest = {
-  id: number;
-  fn: WorkerFunctions;
-  args: any;
-};
-
-export type ZkappWorkerReponse = {
-  id: number;
-  data: any;
-};
 // changed `process.browser` to `typeof window !== 'undefined'`
 if (typeof window !== "undefined") {
   addEventListener("message", async (event: MessageEvent<ZkappWorkerRequest>) => {
