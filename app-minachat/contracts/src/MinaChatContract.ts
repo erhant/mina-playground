@@ -12,6 +12,7 @@ import {
   Signature,
   Circuit,
   Bool,
+  Poseidon,
 } from 'snarkyjs';
 import type { TreeUpdateType } from './types';
 import constants from './constants/index.js';
@@ -58,8 +59,8 @@ export class MinaChatContract extends SmartContract {
     let serverPublicKey = this.serverPublicKey.get();
     this.serverPublicKey.assertEquals(serverPublicKey);
 
-    // newLeaf can be a function of the existing leaf
-    // newLeaf[0].assertGt(leaf[0]);
+    // TODO: add constraints here on the shared key
+
     const storedNewRoot = this.assertRootUpdates(
       keysNumber,
       keysRoot,

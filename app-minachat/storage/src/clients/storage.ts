@@ -49,6 +49,14 @@ class StorageClient implements Client {
     zkAppAddress58: string,
     root: string
   ): Array<[string, string[]]> {
+    // empty if zkApp does not exist here
+    if (!(zkAppAddress58 in this.database)) {
+      return [];
+    }
+    // empty if zkApp exists but root does not exist here
+    if (!(root in this.database[zkAppAddress58].root2data)) {
+      return [];
+    }
     return this.database[zkAppAddress58].root2data[root].items;
   }
 

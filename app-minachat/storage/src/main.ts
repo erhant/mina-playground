@@ -25,7 +25,7 @@ export async function launchServer(): Promise<Server> {
 
   // logs the endpoint calls with timestamps
   app.use(function (req, res, next) {
-    logger.log('\t  >>>', new Date().toTimeString(), req.originalUrl, '\t');
+    logger.log('  >>>', new Date().toLocaleTimeString(), req.originalUrl, '\t');
     next();
   });
   // setup clients

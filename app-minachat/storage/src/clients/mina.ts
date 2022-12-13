@@ -41,7 +41,7 @@ class MinaClient implements Client {
         'utf8'
       );
       const deployerPrivateKeyBase58 = JSON.parse(deployerKeysFileContents)
-        .privateKey58 as string;
+        .privateKey as string;
       this.serverPrivateKey = PrivateKey.fromBase58(deployerPrivateKeyBase58);
     } else {
       // connect to Berkeley
@@ -56,7 +56,7 @@ class MinaClient implements Client {
         'utf8'
       );
       const deployerPrivateKeyBase58 = JSON.parse(deployerKeysFileContents)
-        .privateKey58 as string;
+        .privateKey as string;
       this.serverPrivateKey = PrivateKey.fromBase58(deployerPrivateKeyBase58);
     }
 
